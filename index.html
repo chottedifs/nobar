@@ -7,6 +7,9 @@
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- PeerJS Standalone CDN (Sangat stabil di GitHub Pages) -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
@@ -20,25 +23,33 @@
       </h1>
       <div id="connection-status" class="flex items-center gap-2 text-sm text-yellow-400 font-medium bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800">
         <span class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span>
-        Belum Terhubung
+        Menyiapkan Peer...
       </div>
     </div>
 
     <!-- Panel Kontrol Ruangan & Input Video -->
     <div class="p-4 bg-slate-800 border-b border-slate-700 grid grid-cols-1 md:grid-cols-2 gap-4">
-      <!-- Input Room ID -->
-      <div class="flex gap-2">
-        <input type="text" id="room-id-input" placeholder="Masukkan Nama Ruangan (mis: nobar-kita)" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500">
-        <button id="btn-join" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold transition-colors shrink-0">
-          Masuk
-        </button>
+      <!-- Info ID Saya & Input Room ID Pasangan -->
+      <div class="space-y-2">
+        <div class="text-xs text-slate-400">
+          ID Anda: <span id="my-peer-id" class="font-mono font-bold text-indigo-300">Memuat...</span>
+        </div>
+        <div class="flex gap-2">
+          <input type="text" id="target-peer-input" placeholder="Masukkan ID Pasangan" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500">
+          <button id="btn-connect" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold transition-colors shrink-0">
+            Hubungkan
+          </button>
+        </div>
       </div>
 
       <!-- Input URL Video -->
-      <div class="flex gap-2">
-        <input type="text" id="video-url-input" placeholder="URL Video (.mp4 / direct link)" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500">
-        <button id="btn-load-url" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-semibold transition-colors shrink-0">
-          Muat Video
+      <div class="flex items-end gap-2">
+        <div class="w-full">
+          <label class="block text-xs text-slate-400 mb-1">URL Video Direct (.mp4)</label>
+          <input type="text" id="video-url-input" placeholder="https://example.com/video.mp4" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500">
+        </div>
+        <button id="btn-load-url" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-semibold transition-colors shrink-0 h-[40px]">
+          Muat
         </button>
       </div>
     </div>
@@ -51,11 +62,11 @@
       </video>
     </div>
 
-    <!-- Area Log & Chat -->
+    <!-- Area Log Aktivitas -->
     <div class="p-4 bg-slate-950 border-t border-slate-700">
       <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Log Aktivitas</h2>
       <div id="activity-log" class="h-28 overflow-y-auto bg-slate-900 p-3 rounded-lg text-xs space-y-1 font-mono text-slate-300 border border-slate-800">
-        <div>[System] Silakan masukkan nama ruangan untuk memulai.</div>
+        <div>[System] Menginisialisasi koneksi server...</div>
       </div>
     </div>
   </div>
@@ -63,35 +74,27 @@
   <!-- Toast Notification -->
   <div id="toast" class="fixed bottom-5 right-5 hidden px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all transform translate-y-2"></div>
 
-  <!-- Main ES Module Script -->
-  <script type="module">
-    // Import Trystero langsung via esm.sh CDN (Sangat stabil di GitHub Pages)
-    import { joinRoom as joinTrysteroRoom } from 'https://esm.sh/trystero@0.18.2/torrent';
-
-    let room = null;
-    let sendMediaState = null;
-    let getMediaState = null;
-    let sendChangeUrl = null;
-    let getChangeUrl = null;
+  <!-- JavaScript Standalone (Tanpa type="module" / ES Import) -->
+  <script>
+    let peer = null;
+    let conn = null;
     let isRemoteAction = false;
 
     const player = document.getElementById('media-player');
     const logContainer = document.getElementById('activity-log');
     const statusDiv = document.getElementById('connection-status');
-    const btnJoin = document.getElementById('btn-join');
-    const btnLoadUrl = document.getElementById('btn-load-url');
+    const myPeerIdSpan = document.getElementById('my-peer-id');
 
-    function log(message) {
+    function log(msg) {
       const entry = document.createElement('div');
-      const time = new Date().toLocaleTimeString();
-      entry.textContent = `[${time}] ${message}`;
+      entry.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
       logContainer.appendChild(entry);
       logContainer.scrollTop = logContainer.scrollHeight;
     }
 
-    function showToast(message, type = 'info') {
+    function showToast(msg, type = 'info') {
       const toast = document.getElementById('toast');
-      toast.textContent = message;
+      toast.textContent = msg;
       toast.className = `fixed bottom-5 right-5 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
         type === 'error' ? 'bg-red-600 text-white' : 
         type === 'success' ? 'bg-emerald-600 text-white' : 'bg-indigo-600 text-white'
@@ -100,124 +103,128 @@
       setTimeout(() => toast.classList.add('hidden'), 3000);
     }
 
-    function updateConnectionStatus(isConnected) {
+    function updateStatus(isConnected, text) {
       if (isConnected) {
         statusDiv.className = 'flex items-center gap-2 text-sm text-emerald-400 font-medium bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800';
-        statusDiv.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Pasangan Terhubung';
+        statusDiv.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> ${text || 'Terhubung'}`;
       } else {
         statusDiv.className = 'flex items-center gap-2 text-sm text-yellow-400 font-medium bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800';
-        statusDiv.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span> Menunggu Pasangan...';
+        statusDiv.innerHTML = `<span class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span> ${text || 'Belum Terhubung'}`;
       }
     }
 
-    // Bind Event Handler
-    btnJoin.addEventListener('click', joinRoom);
-    btnLoadUrl.addEventListener('click', changeMediaUrl);
+    // Inisialisasi PeerJS saat halaman dimuat
+    function initPeer() {
+      // Menggunakan Google Public STUN Server untuk menembus NAT/Firewall seluler
+      peer = new Peer({
+        config: {
+          iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+          ]
+        }
+      });
 
-    function joinRoom() {
-      const roomIdInput = document.getElementById('room-id-input');
-      const roomName = roomIdInput.value.trim();
+      peer.on('open', (id) => {
+        myPeerIdSpan.textContent = id;
+        updateStatus(false, 'Siap Terhubung');
+        log(`ID Peer Anda: ${id}`);
+        showToast('Server signalling terhubung!', 'success');
+      });
 
-      if (!roomName) {
-        showToast('Masukkan nama ruangan terlebih dahulu!', 'error');
-        return;
-      }
+      // Menerima koneksi masuk dari pasangan
+      peer.on('connection', (incomingConn) => {
+        conn = incomingConn;
+        setupConnection();
+        log(`Menerima koneksi dari ID: ${conn.peer}`);
+        showToast('Pasangan terhubung!', 'success');
+      });
 
-      const config = { appId: 'nobar-space-v1' };
+      peer.on('error', (err) => {
+        log(`Error Peer: ${err.type}`);
+        showToast(`Error: ${err.type}`, 'error');
+      });
+    }
 
-      try {
-        if (room) room.leave();
-        
-        room = joinTrysteroRoom(config, roomName);
-        log(`Mencari pasangan di ruangan: "${roomName}"...`);
-        showToast(`Bergabung ke ruangan: ${roomName}`, 'success');
+    // Menghubungkan ke ID pasangan
+    document.getElementById('btn-connect').addEventListener('click', () => {
+      const targetId = document.getElementById('target-peer-input').value.trim();
+      if (!targetId) return showToast('Masukkan ID pasangan!', 'error');
 
-        // Handlers peer terhubung
-        room.onPeerJoin(peerId => {
-          log(`Pasangan terhubung! (ID: ${peerId.substring(0, 6)}...)`);
-          updateConnectionStatus(true);
-          showToast('Pasangan telah bergabung!', 'success');
-        });
+      log(`Menghubungkan ke ${targetId}...`);
+      conn = peer.connect(targetId);
+      setupConnection();
+    });
 
-        room.onPeerLeave(peerId => {
-          log(`Pasangan terputus.`);
-          updateConnectionStatus(false);
-          showToast('Pasangan keluar dari ruangan.', 'error');
-        });
+    // Setup event listener data sinkronisasi
+    function setupConnection() {
+      conn.on('open', () => {
+        updateStatus(true, 'Pasangan Terhubung');
+        log('Koneksi P2P Berhasil Terbentuk!');
+      });
 
-        // Setup channel aksi sinkronisasi
-        [sendMediaState, getMediaState] = room.makeAction('mediaState');
-        [sendChangeUrl, getChangeUrl] = room.makeAction('changeUrl');
+      conn.on('data', (data) => {
+        isRemoteAction = true;
 
-        // Callback menerima aksi dari pasangan
-        getMediaState((data) => {
-          isRemoteAction = true;
-          if (Math.abs(player.currentTime - data.time) > 0.5) {
+        if (data.type === 'sync') {
+          if (Math.abs(player.currentTime - data.time) > 0.4) {
             player.currentTime = data.time;
           }
-          if (data.type === 'play' && player.paused) {
+          if (data.action === 'play' && player.paused) {
             player.play().catch(() => {});
-            log('Pasangan memutar video.');
-          } else if (data.type === 'pause' && !player.paused) {
+            log('Pasangan memutar video');
+          } else if (data.action === 'pause' && !player.paused) {
             player.pause();
-            log('Pasangan menjeda video.');
-          } else if (data.type === 'seek') {
-            log(`Pasangan melompati durasi ke ${Math.round(data.time)}s.`);
+            log('Pasangan menjeda video');
           }
-          setTimeout(() => { isRemoteAction = false; }, 200);
-        });
-
-        getChangeUrl((url) => {
-          log(`Menerima URL video baru dari pasangan.`);
-          document.getElementById('video-source').src = url;
+        } else if (data.type === 'url') {
+          document.getElementById('video-source').src = data.url;
           player.load();
-          showToast('URL video telah diperbarui oleh pasangan.', 'info');
-        });
+          log('URL Video diperbarui oleh pasangan');
+          showToast('URL Video diperbarui!', 'info');
+        }
 
-      } catch (err) {
-        log(`Gagal terhubung: ${err.message}`);
-        showToast('Gagal menghubungkan ke ruangan.', 'error');
+        setTimeout(() => { isRemoteAction = false; }, 150);
+      });
+
+      conn.on('close', () => {
+        updateStatus(false, 'Terputus');
+        log('Koneksi terputus dari pasangan');
+        showToast('Koneksi terputus', 'error');
+      });
+    }
+
+    // Kirim event Video Control
+    function sendSync(action) {
+      if (conn && conn.open && !isRemoteAction) {
+        conn.send({
+          type: 'sync',
+          action: action,
+          time: player.currentTime
+        });
       }
     }
 
-    function changeMediaUrl() {
-      const urlInput = document.getElementById('video-url-input');
-      const url = urlInput.value.trim();
+    player.addEventListener('play', () => { sendSync('play'); log('Memutar video'); });
+    player.addEventListener('pause', () => { sendSync('pause'); log('Menjeda video'); });
+    player.addEventListener('seeked', () => { sendSync('seek'); });
 
-      if (!url) {
-        showToast('Masukkan URL video yang valid!', 'error');
-        return;
-      }
+    // Ubah & Kirim URL Video
+    document.getElementById('btn-load-url').addEventListener('click', () => {
+      const url = document.getElementById('video-url-input').value.trim();
+      if (!url) return showToast('Masukkan URL video!', 'error');
 
       document.getElementById('video-source').src = url;
       player.load();
-      log(`Memuat video baru: ${url}`);
+      log(`Memuat video: ${url}`);
 
-      if (sendChangeUrl) {
-        sendChangeUrl(url);
-      }
-    }
-
-    // Media Player Event Listeners
-    player.addEventListener('play', () => {
-      if (!isRemoteAction && sendMediaState) {
-        sendMediaState({ type: 'play', time: player.currentTime });
-        log('Memutar video...');
+      if (conn && conn.open) {
+        conn.send({ type: 'url', url: url });
       }
     });
 
-    player.addEventListener('pause', () => {
-      if (!isRemoteAction && sendMediaState) {
-        sendMediaState({ type: 'pause', time: player.currentTime });
-        log('Menjeda video...');
-      }
-    });
-
-    player.addEventListener('seeked', () => {
-      if (!isRemoteAction && sendMediaState) {
-        sendMediaState({ type: 'seek', time: player.currentTime });
-      }
-    });
+    // Jalankan inisialisasi
+    window.addEventListener('load', initPeer);
   </script>
 </body>
 </html>
