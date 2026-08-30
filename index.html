@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nobar Space - Player, Share Screen & Games</title>
+  <title>Nobar Space - Player, Share Screen & Romantic Games</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
@@ -19,7 +19,7 @@
       <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
       <div>
         <h1 class="font-semibold text-sm sm:text-base leading-none text-slate-100">NOBAR SPACE</h1>
-        <p class="text-[11px] text-slate-400 mt-1">Video Sync, Screen Share & Mini Games</p>
+        <p class="text-[11px] text-slate-400 mt-1">Video Sync, Screen Share & Romantic Challenge</p>
       </div>
     </div>
 
@@ -31,8 +31,8 @@
       </div>
 
       <div class="flex items-center gap-1.5">
-        <input id="partner-id-input" type="text" placeholder="Masukkan ID Pasangan..." class="bg-slate-950 border border-slate-800 rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-36 sm:w-44">
-        <button onclick="connectToPartner()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-3.5 py-1.5 rounded-md">Hubungkan</button>
+        <input id="partner-id-input" type="text" placeholder="Masukkan ID Pasangan..." class="bg-slate-950 border border-slate-800 rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500 w-36 sm:w-44">
+        <button onclick="connectToPartner()" class="bg-rose-600 hover:bg-rose-500 text-white font-medium px-3.5 py-1.5 rounded-md">Hubungkan</button>
       </div>
 
       <div id="status-badge" class="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-md font-medium text-slate-400">
@@ -49,8 +49,8 @@
       <!-- Tab Controller: Player / Games -->
       <div class="flex items-center justify-between gap-2 mb-3 bg-slate-900 p-1.5 rounded-lg border border-slate-800">
         <div class="flex items-center gap-1">
-          <button id="tab-btn-media" onclick="switchMainTab('media')" class="px-4 py-1.5 rounded-md text-xs font-semibold bg-indigo-600 text-white transition-all">📺 Pemutar Video & Screen Share</button>
-          <button id="tab-btn-game" onclick="switchMainTab('game')" class="px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all">🎲 Game Ular Tangga Challenge</button>
+          <button id="tab-btn-media" onclick="switchMainTab('media')" class="px-4 py-1.5 rounded-md text-xs font-semibold bg-rose-600 text-white transition-all">📺 Pemutar Video & Screen Share</button>
+          <button id="tab-btn-game" onclick="switchMainTab('game')" class="px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all">💖 Romantic Truth or Dare</button>
         </div>
       </div>
 
@@ -58,8 +58,8 @@
       <div id="section-media" class="flex-1 flex flex-col">
         <div class="flex flex-wrap sm:flex-nowrap gap-2 mb-2">
           <form onsubmit="changeVideoHandler(event)" class="flex-1 flex gap-2">
-            <input id="video-url-input" type="text" placeholder="Tempel URL MP4 atau Link Streaming..." class="flex-1 bg-slate-900 border border-slate-800 rounded-md px-3.5 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
-            <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs sm:text-sm px-4 py-2 rounded-md">Putar Video</button>
+            <input id="video-url-input" type="text" placeholder="Tempel URL MP4 atau Link Streaming..." class="flex-1 bg-slate-900 border border-slate-800 rounded-md px-3.5 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500">
+            <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs sm:text-sm px-4 py-2 rounded-md">Putar Video</button>
           </form>
           <button id="screenshare-btn" onclick="toggleScreenShare()" class="bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs sm:text-sm px-4 py-2 rounded-md flex items-center gap-2 shrink-0">
             <span>🖥️</span> <span id="screenshare-label">Share Screen</span>
@@ -87,13 +87,13 @@
           </div>
           <div class="flex items-center gap-2">
             <button onclick="sendEmoji('❤️')" class="text-lg p-1 hover:bg-slate-800 rounded">❤️</button>
-            <button onclick="sendEmoji('😂')" class="text-lg p-1 hover:bg-slate-800 rounded">😂</button>
-            <button onclick="sendEmoji('🔥')" class="text-lg p-1 hover:bg-slate-800 rounded">🔥</button>
+            <button onclick="sendEmoji('💖')" class="text-lg p-1 hover:bg-slate-800 rounded">💖</button>
+            <button onclick="sendEmoji('🥰')" class="text-lg p-1 hover:bg-slate-800 rounded">🥰</button>
           </div>
         </div>
       </div>
 
-      <!-- SECTION 2: GAME ULAR TANGGA CHALLENGE -->
+      <!-- SECTION 2: GAME ULAR TANGGA ROMANTIC TRUTH OR DARE -->
       <div id="section-game" class="hidden flex-1 flex flex-col lg:flex-row gap-4">
         <!-- Board Grid Area -->
         <div class="flex-1 flex flex-col items-center justify-center bg-slate-950 p-3 rounded-lg border border-slate-800">
@@ -103,18 +103,21 @@
         </div>
 
         <!-- Game Controls & Info -->
-        <div class="w-full lg:w-72 bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col justify-between gap-4">
+        <div class="w-full lg:w-80 bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col justify-between gap-4">
           <div>
-            <h2 class="font-semibold text-sm text-indigo-400 mb-2">Ular Tangga Challenge 🎲</h2>
-            <p class="text-xs text-slate-400 mb-4">Setiap petak berisi tantangan acak yang wajib dilakukan oleh pemain yang hinggap di sana!</p>
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-lg">💖</span>
+              <h2 class="font-semibold text-sm text-rose-400">Romantic Truth or Dare</h2>
+            </div>
+            <p class="text-xs text-slate-400 mb-4">Ular Tangga khusus untuk mempererat hubungan, memahami pasangan, dan membangun momen romantis.</p>
             
             <div class="space-y-2 mb-4 text-xs">
               <div class="flex justify-between p-2 rounded bg-slate-950 border border-slate-800">
-                <span class="text-indigo-400 font-medium">Pemain 1 (Anda):</span>
+                <span class="text-rose-400 font-medium">Pemain 1 (Anda):</span>
                 <span id="p1-pos" class="font-bold">Petak 1</span>
               </div>
               <div class="flex justify-between p-2 rounded bg-slate-950 border border-slate-800">
-                <span class="text-rose-400 font-medium">Pemain 2 (Pasangan):</span>
+                <span class="text-indigo-400 font-medium">Pemain 2 (Pasangan):</span>
                 <span id="p2-pos" class="font-bold">Petak 1</span>
               </div>
               <div class="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between items-center">
@@ -123,17 +126,19 @@
               </div>
             </div>
 
-            <div class="p-3 bg-indigo-950/40 border border-indigo-800/50 rounded-lg">
-              <div class="text-[11px] text-indigo-300 font-semibold uppercase tracking-wider mb-1">Tantangan Aktif ⚡</div>
-              <div id="challenge-box" class="text-xs font-medium text-slate-200 min-h-[48px] flex items-center">
-                Kocok dadu untuk memulai tantangan!
+            <div class="p-3 bg-rose-950/40 border border-rose-800/50 rounded-lg">
+              <div class="flex items-center justify-between mb-1">
+                <span id="challenge-type" class="text-[11px] text-rose-300 font-semibold uppercase tracking-wider">Tantangan Aktif ⚡</span>
+              </div>
+              <div id="challenge-box" class="text-xs font-medium text-slate-200 min-h-[56px] flex items-center leading-relaxed">
+                Kocok dadu untuk memulai tantangan romantis bersama pasangan!
               </div>
             </div>
           </div>
 
           <div class="space-y-2">
             <div id="dice-result" class="text-center font-bold text-2xl py-1 text-amber-400 hidden">🎲 <span id="dice-num">1</span></div>
-            <button id="roll-dice-btn" onclick="rollDice()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-md text-xs shadow-lg transition-all">
+            <button id="roll-dice-btn" onclick="rollDice()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-md text-xs shadow-lg transition-all">
               🎲 Kocok Dadu
             </button>
             <button onclick="resetGame()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-1.5 rounded-md">
@@ -152,8 +157,8 @@
         <div class="bg-slate-900 border border-slate-800 text-slate-400 p-3 rounded text-center">Salin ID Anda di atas lalu bagikan ke pasangan untuk terhubung.</div>
       </div>
       <form onsubmit="sendChatHandler(event)" class="p-3 border-t border-slate-800 flex gap-2">
-        <input id="chat-input" type="text" placeholder="Tulis pesan..." class="flex-1 bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
-        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-medium">Kirim</button>
+        <input id="chat-input" type="text" placeholder="Tulis pesan..." class="flex-1 bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500">
+        <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded text-xs font-medium">Kirim</button>
       </form>
     </div>
   </div>
@@ -165,19 +170,20 @@
     // Game States
     let p1Pos = 1, p2Pos = 1;
     let isMyTurn = true;
-    let myRole = 'P1'; // P1 = Host, P2 = Client
+    let myRole = 'P1';
 
+    // Truth or Dare Romantis
     const challenges = [
-      "Jelaskan 1 hal yang paling kamu suka dari pasanganmu!",
-      "Nyanyikan 1 bait lagu favoritmu sekarang!",
-      "Kirimkan emoji paling aneh ke chat room!",
-      "Tirukan suara hewan favoritmu selama 5 detik!",
-      "Ceritakan momen paling konyol yang pernah kamu alami!",
-      "Tunjukkan ekspresi wajah paling lucu ke kamera/foto!",
-      "Bocorkan 1 rahasia kecil atau kebiasaan unikmu!",
-      "Beri pujian yang manis untuk pasanganmu!",
-      "Tanggung tantangan bebas dari pasanganmu!",
-      "Kirimkan foto selfie dengan gaya paling konyol!"
+      { type: "TRUTH", text: "Apa kesan pertamamu saat melihatku, dan kapan kamu sadar kamu menyukaiku?" },
+      { type: "DARE", text: "Tatap mata pasanganmu secara langsung selama 30 detik tanpa tertawa." },
+      { type: "TRUTH", text: "Hal kecil apa yang sering aku lakukan tanpa sadar yang membuatmu merasa dicintai?" },
+      { type: "DARE", text: "Kirimkan pesan suara (voice note) singkat berisi 3 pujian manis untuk pasanganmu." },
+      { type: "TRUTH", text: "Dari semua kencan atau momen bersama, mana yang paling berkesan dan ingin kamu ulang?" },
+      { type: "DARE", text: "Pegang tangan pasanganmu (atau tunjukkan gestur hangat) dan sebutkan hal yang paling kamu syukuri darinya." },
+      { type: "TRUTH", text: "Apa satu impian atau rencana romantis yang paling ingin kamu wujudkan bersamaku?" },
+      { type: "DARE", text: "Kirimkan foto ekspresi paling manis atau foto momen kenangan favorit kalian berdua di chat!" },
+      { type: "TRUTH", text: "Kapan momen bersamaku yang membuatmu merasa paling nyaman dan diterima apa adanya?" },
+      { type: "DARE", text: "Putar lagu romantis favorit kalian dan nikmati 1 menit mendengarkannya bersama." }
     ];
 
     const snakesAndLadders = {
@@ -242,8 +248,8 @@
     function switchMainTab(tab) {
       document.getElementById('section-media').classList.toggle('hidden', tab !== 'media');
       document.getElementById('section-game').classList.toggle('hidden', tab !== 'game');
-      document.getElementById('tab-btn-media').className = tab === 'media' ? 'px-4 py-1.5 rounded-md text-xs font-semibold bg-indigo-600 text-white transition-all' : 'px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all';
-      document.getElementById('tab-btn-game').className = tab === 'game' ? 'px-4 py-1.5 rounded-md text-xs font-semibold bg-indigo-600 text-white transition-all' : 'px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all';
+      document.getElementById('tab-btn-media').className = tab === 'media' ? 'px-4 py-1.5 rounded-md text-xs font-semibold bg-rose-600 text-white transition-all' : 'px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all';
+      document.getElementById('tab-btn-game').className = tab === 'game' ? 'px-4 py-1.5 rounded-md text-xs font-semibold bg-rose-600 text-white transition-all' : 'px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all';
     }
 
     /* --- GAME ULAR TANGGA LOGIC --- */
@@ -272,10 +278,10 @@
       }
 
       const p1Box = document.getElementById(`tokens-${p1Pos}`);
-      if (p1Box) p1Box.innerHTML += `<span class="w-3.5 h-3.5 bg-indigo-500 rounded-full border border-white text-[8px] flex items-center justify-center font-bold text-white shadow">P1</span>`;
+      if (p1Box) p1Box.innerHTML += `<span class="w-3.5 h-3.5 bg-rose-500 rounded-full border border-white text-[8px] flex items-center justify-center font-bold text-white shadow">P1</span>`;
 
       const p2Box = document.getElementById(`tokens-${p2Pos}`);
-      if (p2Box) p2Box.innerHTML += `<span class="w-3.5 h-3.5 bg-rose-500 rounded-full border border-white text-[8px] flex items-center justify-center font-bold text-white shadow">P2</span>`;
+      if (p2Box) p2Box.innerHTML += `<span class="w-3.5 h-3.5 bg-indigo-500 rounded-full border border-white text-[8px] flex items-center justify-center font-bold text-white shadow">P2</span>`;
 
       document.getElementById('p1-pos').innerText = `Petak ${p1Pos}`;
       document.getElementById('p2-pos').innerText = `Petak ${p2Pos}`;
@@ -312,12 +318,15 @@
 
       renderTokens();
 
-      const challenge = challenges[(newPos + dice) % challenges.length];
-      document.getElementById('challenge-box').innerText = `Petak ${newPos}: "${challenge}"`;
+      const item = challenges[(newPos + dice) % challenges.length];
+      document.getElementById('challenge-type').innerText = `${item.type} (PETAK ${newPos})`;
+      document.getElementById('challenge-type').className = item.type === 'TRUTH' ? 'text-[11px] text-indigo-400 font-semibold uppercase tracking-wider' : 'text-[11px] text-rose-400 font-semibold uppercase tracking-wider';
+      document.getElementById('challenge-box').innerText = `"${item.text}"`;
 
       if (newPos === 25) {
         showToast(`🎉 ${role} MEMENANGKAN PERMAINAN!`, 'success');
-        document.getElementById('challenge-box').innerText = `🎉 ${role} menang! Beri hukuman/keinginan spesial!`;
+        document.getElementById('challenge-type').innerText = 'PEMENANG 🎉';
+        document.getElementById('challenge-box').innerText = `🎉 ${role} sampai di garis akhir! Minta 1 permintaan romantis spesial dari pasanganmu!`;
       }
     }
 
@@ -325,12 +334,13 @@
       const activeRole = isMyTurn ? myRole : (myRole === 'P1' ? 'P2' : 'P1');
       document.getElementById('current-turn-display').innerText = activeRole === myRole ? 'Giliran Anda' : 'Giliran Pasangan';
       document.getElementById('roll-dice-btn').disabled = !isMyTurn;
-      document.getElementById('roll-dice-btn').className = isMyTurn ? 'w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-md text-xs shadow-lg transition-all' : 'w-full bg-slate-800 text-slate-500 font-semibold py-2.5 rounded-md text-xs cursor-not-allowed';
+      document.getElementById('roll-dice-btn').className = isMyTurn ? 'w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-md text-xs shadow-lg transition-all' : 'w-full bg-slate-800 text-slate-500 font-semibold py-2.5 rounded-md text-xs cursor-not-allowed';
     }
 
     function resetGame() {
       p1Pos = 1; p2Pos = 1;
       renderTokens();
+      document.getElementById('challenge-type').innerText = 'TANTANGAN AKTIFF ⚡';
       document.getElementById('challenge-box').innerText = "Game telah di-reset.";
       sendData({ type: 'GAME_RESET' });
     }
@@ -358,6 +368,7 @@
       if (data.type === 'GAME_RESET') {
         p1Pos = 1; p2Pos = 1;
         renderTokens();
+        document.getElementById('challenge-type').innerText = 'TANTANGAN AKTIFF ⚡';
         document.getElementById('challenge-box').innerText = "Pasangan mengulang permainan.";
       }
     }
@@ -434,7 +445,7 @@
       const chatBox = document.getElementById('chat-messages');
       const div = document.createElement('div');
       div.className = `flex flex-col ${sender === 'me' ? 'items-end' : 'items-start'} my-1`;
-      div.innerHTML = `<div class="px-3 py-2 rounded max-w-[85%] ${sender === 'me' ? 'bg-indigo-600 text-white' : 'bg-slate-900 border border-slate-800'}">${text}</div>`;
+      div.innerHTML = `<div class="px-3 py-2 rounded max-w-[85%] ${sender === 'me' ? 'bg-rose-600 text-white' : 'bg-slate-900 border border-slate-800'}">${text}</div>`;
       chatBox.appendChild(div);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
