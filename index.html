@@ -7,9 +7,6 @@
   
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Trystero Nostr Strategy (Lebih stabil untuk GitHub Pages / HTTPS) -->
-  <script src="https://cdn.jsdelivr.net/npm/trystero@0.18.2/dist/trystero-nostr.min.js"></script>
 </head>
 <body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
@@ -32,7 +29,7 @@
       <!-- Input Room ID -->
       <div class="flex gap-2">
         <input type="text" id="room-id-input" placeholder="Masukkan Nama Ruangan (mis: nobar-kita)" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500">
-        <button onclick="joinRoom()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold transition-colors shrink-0">
+        <button id="btn-join" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold transition-colors shrink-0">
           Masuk
         </button>
       </div>
@@ -40,7 +37,7 @@
       <!-- Input URL Video -->
       <div class="flex gap-2">
         <input type="text" id="video-url-input" placeholder="URL Video (.mp4 / direct link)" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500">
-        <button onclick="changeMediaUrl()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-semibold transition-colors shrink-0">
+        <button id="btn-load-url" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-semibold transition-colors shrink-0">
           Muat Video
         </button>
       </div>
@@ -66,11 +63,11 @@
   <!-- Toast Notification -->
   <div id="toast" class="fixed bottom-5 right-5 hidden px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all transform translate-y-2"></div>
 
-  <!-- Application Logic -->
-  <script>
-    // Inisialisasi Trystero dari global CDN
-    const { joinRoom: trysteroJoinRoom } = window.trysteroNostr;
-    
+  <!-- Main ES Module Script -->
+  <script type="module">
+    // Import Trystero langsung via esm.sh CDN (Sangat stabil di GitHub Pages)
+    import { joinRoom as joinTrysteroRoom } from 'https://esm.sh/trystero@0.18.2/torrent';
+
     let room = null;
     let sendMediaState = null;
     let getMediaState = null;
@@ -81,6 +78,8 @@
     const player = document.getElementById('media-player');
     const logContainer = document.getElementById('activity-log');
     const statusDiv = document.getElementById('connection-status');
+    const btnJoin = document.getElementById('btn-join');
+    const btnLoadUrl = document.getElementById('btn-load-url');
 
     function log(message) {
       const entry = document.createElement('div');
@@ -111,6 +110,10 @@
       }
     }
 
+    // Bind Event Handler
+    btnJoin.addEventListener('click', joinRoom);
+    btnLoadUrl.addEventListener('click', changeMediaUrl);
+
     function joinRoom() {
       const roomIdInput = document.getElementById('room-id-input');
       const roomName = roomIdInput.value.trim();
@@ -120,24 +123,16 @@
         return;
       }
 
-      // Konfigurasi Relay Nostr Publik (Stabil & ramah HTTPS)
-      const config = { 
-        appId: 'nobar-space-v1',
-        relays: [
-          'wss://relay.damus.io',
-          'wss://nos.lol',
-          'wss://relay.nostr.band'
-        ]
-      };
+      const config = { appId: 'nobar-space-v1' };
 
       try {
         if (room) room.leave();
         
-        room = trysteroJoinRoom(config, roomName);
-        log(`Bergabung ke ruangan: "${roomName}"`);
-        showToast(`Berhasil masuk ruangan: ${roomName}`, 'success');
+        room = joinTrysteroRoom(config, roomName);
+        log(`Mencari pasangan di ruangan: "${roomName}"...`);
+        showToast(`Bergabung ke ruangan: ${roomName}`, 'success');
 
-        // Event listener peers
+        // Handlers peer terhubung
         room.onPeerJoin(peerId => {
           log(`Pasangan terhubung! (ID: ${peerId.substring(0, 6)}...)`);
           updateConnectionStatus(true);
@@ -150,11 +145,11 @@
           showToast('Pasangan keluar dari ruangan.', 'error');
         });
 
-        // Setup channel komunikasi P2P
+        // Setup channel aksi sinkronisasi
         [sendMediaState, getMediaState] = room.makeAction('mediaState');
         [sendChangeUrl, getChangeUrl] = room.makeAction('changeUrl');
 
-        // Listen sinkronisasi status (Play/Pause/Seek)
+        // Callback menerima aksi dari pasangan
         getMediaState((data) => {
           isRemoteAction = true;
           if (Math.abs(player.currentTime - data.time) > 0.5) {
@@ -172,7 +167,6 @@
           setTimeout(() => { isRemoteAction = false; }, 200);
         });
 
-        // Listen perubahan URL video
         getChangeUrl((url) => {
           log(`Menerima URL video baru dari pasangan.`);
           document.getElementById('video-source').src = url;
@@ -204,7 +198,7 @@
       }
     }
 
-    // Event listener player untuk mengirim perintah ke pasangan
+    // Media Player Event Listeners
     player.addEventListener('play', () => {
       if (!isRemoteAction && sendMediaState) {
         sendMediaState({ type: 'play', time: player.currentTime });
