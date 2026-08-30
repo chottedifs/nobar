@@ -3,60 +3,38 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="referrer" content="strict-origin-when-cross-origin">
-  <title>Nobar Space - Sinkronisasi Video Real-Time</title>
-  <!-- Tailwind CSS CDN -->
+  <title>Nobar Space - Player, Share Screen & Games</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- PeerJS CDN untuk koneksi P2P Real-time -->
   <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
   <style>
-    /* Format penuh untuk iframe YouTube dan pemutar HTML5 */
-    #player-frame, #html5-player {
-      width: 100% !important;
-      height: 100% !important;
-      min-height: 260px;
-      border: 0;
-    }
+    iframe, video { width: 100% !important; height: 100% !important; min-height: 280px; border: 0; object-fit: contain; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden antialiased">
-
-  <!-- Toast Notification System -->
   <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
 
-  <!-- Header Navigasi -->
+  <!-- Header Navigation -->
   <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 z-10">
     <div class="flex items-center gap-3">
-      <div class="w-2.5 h-2.5 rounded-full bg-indigo-500"></div>
+      <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
       <div>
-        <h1 class="font-semibold text-sm sm:text-base leading-none text-slate-100 tracking-tight">NOBAR SPACE</h1>
-        <p class="text-[11px] text-slate-400 mt-1">Platform Sinkronisasi Media Real-Time</p>
+        <h1 class="font-semibold text-sm sm:text-base leading-none text-slate-100">NOBAR SPACE</h1>
+        <p class="text-[11px] text-slate-400 mt-1">Video Sync, Screen Share & Mini Games</p>
       </div>
     </div>
 
-    <!-- Status Koneksi & ID Peer -->
     <div class="flex flex-wrap items-center gap-2 text-xs">
-      <!-- ID Saya -->
       <div class="bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-md flex items-center gap-2">
         <span class="text-slate-400">ID Anda:</span>
         <span id="my-id" class="font-mono font-medium text-slate-200">Menghubungkan...</span>
-        <button onclick="copyMyId()" class="text-slate-400 hover:text-slate-200 transition font-medium border-l border-slate-800 pl-2 ml-1">
-          Salin
-        </button>
-        <button onclick="reconnectPeerServer()" class="text-indigo-400 hover:text-indigo-300 transition font-medium border-l border-slate-800 pl-2" title="Reset/Coba Ulang Server">
-          Coba Ulang
-        </button>
+        <button onclick="copyMyId()" class="text-slate-400 hover:text-slate-200 border-l border-slate-800 pl-2 ml-1">Salin</button>
       </div>
 
-      <!-- Input ID Partner -->
       <div class="flex items-center gap-1.5">
-        <input id="partner-id-input" type="text" placeholder="Masukkan ID Pasangan..." class="bg-slate-950 border border-slate-800 rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-36 sm:w-44 transition">
-        <button onclick="connectToPartner()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-3.5 py-1.5 rounded-md transition shadow-sm">
-          Hubungkan
-        </button>
+        <input id="partner-id-input" type="text" placeholder="Masukkan ID Pasangan..." class="bg-slate-950 border border-slate-800 rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 w-36 sm:w-44">
+        <button onclick="connectToPartner()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium px-3.5 py-1.5 rounded-md">Hubungkan</button>
       </div>
 
-      <!-- Indikator Status -->
       <div id="status-badge" class="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-md font-medium text-slate-400">
         <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
         <span id="status-text">Belum Terhubung</span>
@@ -64,648 +42,425 @@
     </div>
   </header>
 
-  <!-- Area Utama App -->
+  <!-- Main View -->
   <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-    
-    <!-- Area Pemutar Video -->
     <div class="flex-1 flex flex-col p-4 bg-slate-900/30 overflow-y-auto">
       
-      <!-- Input Video URL -->
-      <form onsubmit="changeVideoHandler(event)" class="flex gap-2 mb-2">
-        <input id="video-url-input" type="text" placeholder="Masukkan URL YouTube, Vimeo, atau link MP4 langsung..." class="flex-1 bg-slate-900 border border-slate-800 rounded-md px-3.5 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
-        <button type="submit" class="bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs sm:text-sm font-medium px-4 py-2 rounded-md transition shrink-0">
-          Muat Video
-        </button>
-      </form>
-
-      <!-- Rekomendasi / Contoh Video & Sakelar Domain -->
-      <div class="flex items-center justify-between gap-2 mb-3 text-[11px] text-slate-400 flex-wrap">
-        <div class="flex items-center gap-2 flex-wrap">
-          <span>Contoh Video:</span>
-          <button onclick="loadSampleVideo('dQw4w9WgXcQ', 'yt')" class="hover:text-indigo-400 underline">Rick Astley (YouTube)</button>
-          <span>•</span>
-          <button onclick="loadSampleVideo('761022891', 'vimeo')" class="hover:text-indigo-400 underline">Demo (Vimeo)</button>
-          <span>•</span>
-          <button onclick="loadSampleVideo('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4', 'direct')" class="hover:text-indigo-400 underline">Video MP4 Langsung</button>
+      <!-- Tab Controller: Player / Games -->
+      <div class="flex items-center justify-between gap-2 mb-3 bg-slate-900 p-1.5 rounded-lg border border-slate-800">
+        <div class="flex items-center gap-1">
+          <button id="tab-btn-media" onclick="switchMainTab('media')" class="px-4 py-1.5 rounded-md text-xs font-semibold bg-indigo-600 text-white transition-all">📺 Pemutar Video & Screen Share</button>
+          <button id="tab-btn-game" onclick="switchMainTab('game')" class="px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all">🎲 Game Ular Tangga Challenge</button>
         </div>
-
-        <!-- Mode Sakelar YouTube Embed -->
-        <button onclick="toggleYtDomain()" id="yt-domain-btn" class="text-[10px] bg-slate-900 border border-slate-800 hover:border-slate-700 px-2 py-1 rounded text-slate-400 transition">
-          Domain: YouTube Standard
-        </button>
       </div>
 
-      <!-- Video Player Frame Container -->
-      <div class="flex-1 bg-black rounded-lg overflow-hidden relative shadow-2xl min-h-[250px] sm:min-h-[380px] flex items-center justify-center border border-slate-800">
-        <!-- Target Pemutar Container Iframe (YouTube / Vimeo / Generic) -->
-        <div id="embed-player-container" class="w-full h-full">
-          <iframe 
-            id="player-frame"
-            class="w-full h-full"
-            src="https://www.youtube.com/embed/dQw4w9WgXcQ?rel=0&autoplay=0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            referrerpolicy="strict-origin-when-cross-origin"
-            allowfullscreen>
-          </iframe>
-        </div>
-
-        <!-- HTML5 Video Player (Untuk File MP4) -->
-        <video id="html5-player" class="hidden w-full h-full bg-black" controls></video>
-
-        <!-- Floating Emoji Overlay -->
-        <div id="emoji-overlay" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
-      </div>
-
-      <!-- Kontrol Tambahan & Bar Reaksi -->
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-2 mt-3 p-2 bg-slate-900 border border-slate-800 rounded-lg">
-        
-        <!-- Tombol Aba-Aba Sinkronisasi -->
-        <div id="sync-tools" class="flex items-center gap-2 w-full sm:w-auto">
-          <button onclick="sendSyncSignal('PLAY')" class="bg-indigo-600 hover:bg-indigo-500 text-white text-xs px-3 py-1.5 rounded transition font-medium">
-            Aba-Aba Play
-          </button>
-          <button onclick="sendSyncSignal('PAUSE')" class="bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs px-3 py-1.5 rounded transition font-medium">
-            Aba-Aba Pause
+      <!-- SECTION 1: MEDIA PLAYER & SHARE SCREEN -->
+      <div id="section-media" class="flex-1 flex flex-col">
+        <div class="flex flex-wrap sm:flex-nowrap gap-2 mb-2">
+          <form onsubmit="changeVideoHandler(event)" class="flex-1 flex gap-2">
+            <input id="video-url-input" type="text" placeholder="Tempel URL MP4 atau Link Streaming..." class="flex-1 bg-slate-900 border border-slate-800 rounded-md px-3.5 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+            <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-xs sm:text-sm px-4 py-2 rounded-md">Putar Video</button>
+          </form>
+          <button id="screenshare-btn" onclick="toggleScreenShare()" class="bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs sm:text-sm px-4 py-2 rounded-md flex items-center gap-2 shrink-0">
+            <span>🖥️</span> <span id="screenshare-label">Share Screen</span>
           </button>
         </div>
 
-        <!-- Reaksi Emoji -->
-        <div class="flex items-center gap-2 w-full sm:w-auto justify-around border-t sm:border-t-0 border-slate-800 pt-2 sm:pt-0">
-          <span class="text-xs text-slate-400 font-medium hidden sm:inline mr-1">Reaksi:</span>
-          <button onclick="sendEmoji('❤️')" class="text-lg p-1.5 hover:bg-slate-800 rounded transition active:scale-90">❤️</button>
-          <button onclick="sendEmoji('😂')" class="text-lg p-1.5 hover:bg-slate-800 rounded transition active:scale-90">😂</button>
-          <button onclick="sendEmoji('😭')" class="text-lg p-1.5 hover:bg-slate-800 rounded transition active:scale-90">😭</button>
-          <button onclick="sendEmoji('😱')" class="text-lg p-1.5 hover:bg-slate-800 rounded transition active:scale-90">😱</button>
-          <button onclick="sendEmoji('🔥')" class="text-lg p-1.5 hover:bg-slate-800 rounded transition active:scale-90">🔥</button>
-          <button onclick="sendEmoji('👍')" class="text-lg p-1.5 hover:bg-slate-800 rounded transition active:scale-90">👍</button>
+        <div class="flex items-center gap-2 mb-3 text-xs overflow-x-auto pb-1">
+          <span class="text-slate-500 shrink-0">Tes MP4:</span>
+          <button onclick="loadPreset('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded text-slate-300 shrink-0">Film Animation</button>
+          <button onclick="loadPreset('https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded text-slate-300 shrink-0">Sci-Fi Short</button>
+        </div>
+
+        <div class="flex-1 bg-black rounded-lg overflow-hidden relative shadow-2xl min-h-[250px] flex items-center justify-center border border-slate-800">
+          <video id="html5-player" class="w-full h-full bg-black" controls controlsList="nodownload">
+            <source id="video-source" src="https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4" type="video/mp4">
+          </video>
+          <video id="screenshare-player" class="hidden w-full h-full bg-black" autoplay playsinline controls></video>
+          <div id="emoji-overlay" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
+        </div>
+
+        <div class="flex items-center justify-between gap-2 mt-3 p-2 bg-slate-900 border border-slate-800 rounded-lg">
+          <div class="flex items-center gap-2">
+            <button onclick="triggerAction('PLAY')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-1.5 rounded font-medium">▶ Play Bersama</button>
+            <button onclick="triggerAction('PAUSE')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-3.5 py-1.5 rounded font-medium">⏸ Pause Bersama</button>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="sendEmoji('❤️')" class="text-lg p-1 hover:bg-slate-800 rounded">❤️</button>
+            <button onclick="sendEmoji('😂')" class="text-lg p-1 hover:bg-slate-800 rounded">😂</button>
+            <button onclick="sendEmoji('🔥')" class="text-lg p-1 hover:bg-slate-800 rounded">🔥</button>
+          </div>
         </div>
       </div>
+
+      <!-- SECTION 2: GAME ULAR TANGGA CHALLENGE -->
+      <div id="section-game" class="hidden flex-1 flex flex-col lg:flex-row gap-4">
+        <!-- Board Grid Area -->
+        <div class="flex-1 flex flex-col items-center justify-center bg-slate-950 p-3 rounded-lg border border-slate-800">
+          <div class="w-full max-w-[420px] aspect-square grid grid-cols-5 gap-1.5 p-2 bg-slate-900 rounded-lg border border-slate-800 relative" id="board-grid">
+            <!-- Board cells populated dynamically by JS -->
+          </div>
+        </div>
+
+        <!-- Game Controls & Info -->
+        <div class="w-full lg:w-72 bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col justify-between gap-4">
+          <div>
+            <h2 class="font-semibold text-sm text-indigo-400 mb-2">Ular Tangga Challenge 🎲</h2>
+            <p class="text-xs text-slate-400 mb-4">Setiap petak berisi tantangan acak yang wajib dilakukan oleh pemain yang hinggap di sana!</p>
+            
+            <div class="space-y-2 mb-4 text-xs">
+              <div class="flex justify-between p-2 rounded bg-slate-950 border border-slate-800">
+                <span class="text-indigo-400 font-medium">Pemain 1 (Anda):</span>
+                <span id="p1-pos" class="font-bold">Petak 1</span>
+              </div>
+              <div class="flex justify-between p-2 rounded bg-slate-950 border border-slate-800">
+                <span class="text-rose-400 font-medium">Pemain 2 (Pasangan):</span>
+                <span id="p2-pos" class="font-bold">Petak 1</span>
+              </div>
+              <div class="p-2 rounded bg-slate-950 border border-slate-800 flex justify-between items-center">
+                <span class="text-slate-400">Giliran Saat Ini:</span>
+                <span id="current-turn-display" class="font-bold text-emerald-400">Pemain 1</span>
+              </div>
+            </div>
+
+            <div class="p-3 bg-indigo-950/40 border border-indigo-800/50 rounded-lg">
+              <div class="text-[11px] text-indigo-300 font-semibold uppercase tracking-wider mb-1">Tantangan Aktif ⚡</div>
+              <div id="challenge-box" class="text-xs font-medium text-slate-200 min-h-[48px] flex items-center">
+                Kocok dadu untuk memulai tantangan!
+              </div>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div id="dice-result" class="text-center font-bold text-2xl py-1 text-amber-400 hidden">🎲 <span id="dice-num">1</span></div>
+            <button id="roll-dice-btn" onclick="rollDice()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-md text-xs shadow-lg transition-all">
+              🎲 Kocok Dadu
+            </button>
+            <button onclick="resetGame()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-1.5 rounded-md">
+              Reset Permainan
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
-    <!-- Sidebar Chat -->
+    <!-- Chat Sidebar -->
     <div class="w-full lg:w-80 bg-slate-950 border-t lg:border-t-0 lg:border-l border-slate-800 flex flex-col h-64 lg:h-full shrink-0">
-      
-      <!-- Chat Header -->
-      <div class="px-4 py-3 border-b border-slate-800 font-medium text-xs sm:text-sm text-slate-300 flex items-center justify-between bg-slate-900/50">
-        <span>PESAN TEKS</span>
-        <span id="typing-indicator" class="text-[11px] text-indigo-400 hidden">Sedang mengetik...</span>
-      </div>
-
-      <!-- Tempat Pesan Chat -->
+      <div class="px-4 py-3 border-b border-slate-800 font-medium text-xs text-slate-300">OBROLAN REAL-TIME</div>
       <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
-        <div class="bg-slate-900 border border-slate-800/80 text-slate-400 p-3 rounded text-center leading-relaxed">
-          Salin ID Anda ke pasangan untuk terhubung dan menonton bersama.
-        </div>
+        <div class="bg-slate-900 border border-slate-800 text-slate-400 p-3 rounded text-center">Salin ID Anda di atas lalu bagikan ke pasangan untuk terhubung.</div>
       </div>
-
-      <!-- Form Input Chat -->
-      <form onsubmit="sendChatHandler(event)" class="p-3 border-t border-slate-800 flex gap-2 bg-slate-900/50">
-        <input id="chat-input" type="text" oninput="handleTyping()" placeholder="Tulis pesan..." class="flex-1 bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition">
-        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-medium transition">
-          Kirim
-        </button>
+      <form onsubmit="sendChatHandler(event)" class="p-3 border-t border-slate-800 flex gap-2">
+        <input id="chat-input" type="text" placeholder="Tulis pesan..." class="flex-1 bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500">
+        <button type="submit" class="bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-2 rounded text-xs font-medium">Kirim</button>
       </form>
     </div>
-
   </div>
 
   <script>
-    // State Aplikasi
-    let peer = null;
-    let conn = null;
-    let html5Player = null;
-    let currentMode = 'yt'; // 'yt', 'vimeo', atau 'direct'
-    let isRemoteAction = false;
-    let currentVideoId = 'dQw4w9WgXcQ';
-    let currentDirectUrl = '';
-    let useNocookieDomain = false;
-    let typingTimeout = null;
+    let peer = null, conn = null, mediaCall = null;
+    let html5Player = null, screenPlayer = null, localStream = null;
 
-    // Inisialisasi Aplikasi saat DOM Siap
+    // Game States
+    let p1Pos = 1, p2Pos = 1;
+    let isMyTurn = true;
+    let myRole = 'P1'; // P1 = Host, P2 = Client
+
+    const challenges = [
+      "Jelaskan 1 hal yang paling kamu suka dari pasanganmu!",
+      "Nyanyikan 1 bait lagu favoritmu sekarang!",
+      "Kirimkan emoji paling aneh ke chat room!",
+      "Tirukan suara hewan favoritmu selama 5 detik!",
+      "Ceritakan momen paling konyol yang pernah kamu alami!",
+      "Tunjukkan ekspresi wajah paling lucu ke kamera/foto!",
+      "Bocorkan 1 rahasia kecil atau kebiasaan unikmu!",
+      "Beri pujian yang manis untuk pasanganmu!",
+      "Tanggung tantangan bebas dari pasanganmu!",
+      "Kirimkan foto selfie dengan gaya paling konyol!"
+    ];
+
+    const snakesAndLadders = {
+      4: 10,  // Tangga naik
+      9: 15,  // Tangga naik
+      14: 6,  // Ular turun
+      19: 8,  // Ular turun
+      22: 17  // Ular turun
+    };
+
     window.addEventListener('DOMContentLoaded', () => {
       html5Player = document.getElementById('html5-player');
-      setupHTML5PlayerEvents();
+      screenPlayer = document.getElementById('screenshare-player');
+      initBoard();
       initPeer();
+
+      html5Player.addEventListener('play', () => { if (!window.isRemoteEvent) sendData({ type: 'MEDIA_STATE', action: 'PLAY', time: html5Player.currentTime }); window.isRemoteEvent = false; });
+      html5Player.addEventListener('pause', () => { if (!window.isRemoteEvent) sendData({ type: 'MEDIA_STATE', action: 'PAUSE', time: html5Player.currentTime }); window.isRemoteEvent = false; });
     });
 
-    function toggleYtDomain() {
-      useNocookieDomain = !useNocookieDomain;
-      const btn = document.getElementById('yt-domain-btn');
-      if (useNocookieDomain) {
-        btn.innerText = 'Domain: YouTube Nocookie';
-        btn.className = 'text-[10px] bg-indigo-950 border border-indigo-800 px-2 py-1 rounded text-indigo-300 transition';
-        showToast('Menggunakan domain youtube-nocookie.com', 'info');
-      } else {
-        btn.innerText = 'Domain: YouTube Standard';
-        btn.className = 'text-[10px] bg-slate-900 border border-slate-800 hover:border-slate-700 px-2 py-1 rounded text-slate-400 transition';
-        showToast('Menggunakan domain youtube.com', 'info');
-      }
-
-      if (currentMode === 'yt') {
-        setYouTubeEmbed(currentVideoId);
-      }
-    }
-
-    function setYouTubeEmbed(videoId) {
-      currentMode = 'yt';
-      currentVideoId = videoId;
-      
-      const embedContainer = document.getElementById('embed-player-container');
-      embedContainer.classList.remove('hidden');
-      html5Player.classList.add('hidden');
-      if (html5Player) html5Player.pause();
-
-      const domain = useNocookieDomain ? 'www.youtube-nocookie.com' : 'www.youtube.com';
-
-      embedContainer.innerHTML = `
-        <iframe 
-          id="player-frame"
-          class="w-full h-full"
-          src="https://${domain}/embed/${videoId}?rel=0&autoplay=1"
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-          referrerpolicy="strict-origin-when-cross-origin"
-          allowfullscreen>
-        </iframe>
-      `;
-    }
-
-    function setVimeoEmbed(vimeoId) {
-      currentMode = 'vimeo';
-      currentVideoId = vimeoId;
-
-      const embedContainer = document.getElementById('embed-player-container');
-      embedContainer.classList.remove('hidden');
-      html5Player.classList.add('hidden');
-      if (html5Player) html5Player.pause();
-
-      embedContainer.innerHTML = `
-        <iframe 
-          id="player-frame"
-          class="w-full h-full"
-          src="https://player.vimeo.com/video/${vimeoId}?autoplay=1"
-          allow="autoplay; fullscreen; picture-in-picture"
-          allowfullscreen>
-        </iframe>
-      `;
-    }
-
-    function setDirectVideoEmbed(url) {
-      currentMode = 'direct';
-      currentDirectUrl = url;
-
-      const embedContainer = document.getElementById('embed-player-container');
-      embedContainer.classList.add('hidden');
-      html5Player.classList.remove('hidden');
-
-      html5Player.src = url;
-      html5Player.play().catch(() => {});
-    }
-
-    // --- HTML5 Player Setup (MP4 Video) ---
-    function setupHTML5PlayerEvents() {
-      if (!html5Player) return;
-
-      html5Player.addEventListener('play', () => {
-        if (isRemoteAction || currentMode !== 'direct') return;
-        sendData({ type: 'PLAYER_PLAY', time: html5Player.currentTime });
-      });
-
-      html5Player.addEventListener('pause', () => {
-        if (isRemoteAction || currentMode !== 'direct') return;
-        sendData({ type: 'PLAYER_PAUSE', time: html5Player.currentTime });
-      });
-
-      html5Player.addEventListener('seeked', () => {
-        if (isRemoteAction || currentMode !== 'direct') return;
-        sendData({ type: 'PLAYER_SEEK', time: html5Player.currentTime });
-      });
-    }
-
-    // --- 1. SINKRONISASI PEERJS (P2P WEBRTC DENGAN STUN GOOGLE) ---
     function initPeer() {
-      if (peer) {
-        try { peer.destroy(); } catch(e){}
-      }
+      peer = new Peer({ config: { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }] } });
+      peer.on('open', id => { document.getElementById('my-id').innerText = id; showToast('Terhubung ke server signaling', 'success'); });
+      peer.on('connection', connection => { conn = connection; myRole = 'P1'; isMyTurn = true; setupConnectionHandlers(); });
+      
+      peer.on('call', call => {
+        mediaCall = call;
+        call.answer();
+        call.on('stream', remoteStream => { switchToScreenShareView(remoteStream); showToast('Menerima Share Screen', 'info'); });
+        call.on('close', () => { switchToVideoView(); showToast('Share Screen dihentikan', 'info'); });
+      });
 
-      document.getElementById('my-id').innerText = "Menghubungkan...";
-
-      // Konfigurasi dengan Google Public STUN Server untuk menembus proteksi jaringan
-      const peerOptions = {
-        config: {
-          iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' }
-          ]
-        },
-        debug: 1
-      };
-
-      try {
-        peer = new Peer(peerOptions);
-
-        peer.on('open', (id) => {
-          document.getElementById('my-id').innerText = id;
-          showToast('ID koneksi berhasil dibuat!', 'success');
-        });
-
-        peer.on('connection', (connection) => {
-          conn = connection;
-          setupConnectionHandlers();
-          showToast('Menerima permintaan koneksi...', 'info');
-        });
-
-        peer.on('disconnected', () => {
-          document.getElementById('my-id').innerText = "Terputus";
-          showToast('Koneksi server terputus. Mencoba reconnect...', 'warning');
-          if (peer && !peer.destroyed) {
-            peer.reconnect();
-          }
-        });
-
-        peer.on('error', (err) => {
-          console.error('PeerJS Error:', err);
-          document.getElementById('my-id').innerText = "Gagal Server";
-          showToast('Gagal terhubung ke server: ' + (err.type || 'Error Jaringan'), 'error');
-        });
-      } catch (e) {
-        console.error("Gagal menginisialisasi PeerJS:", e);
-        showToast("Browser memblokir koneksi P2P WebRTC.", "error");
-      }
-    }
-
-    function reconnectPeerServer() {
-      showToast('Menghubungkan ulang ke server...', 'info');
-      initPeer();
+      peer.on('error', err => showToast('Gagal server: ' + err.type, 'error'));
     }
 
     function connectToPartner() {
-      const partnerId = document.getElementById('partner-id-input').value.trim();
-      if (!partnerId) {
-        showToast('Masukkan ID Pasangan terlebih dahulu.', 'warning');
-        return;
-      }
-      if (peer && partnerId === peer.id) {
-        showToast('Tidak dapat menghubungkan ke ID sendiri.', 'warning');
-        return;
-      }
-
-      showToast('Menghubungkan ke pasangan...', 'info');
-      conn = peer.connect(partnerId);
+      const pid = document.getElementById('partner-id-input').value.trim();
+      if (!pid) return showToast('Masukkan ID Pasangan', 'warning');
+      conn = peer.connect(pid);
+      myRole = 'P2';
+      isMyTurn = false;
       setupConnectionHandlers();
     }
 
     function setupConnectionHandlers() {
-      if (!conn) return;
-
       conn.on('open', () => {
         updateConnectionStatus(true);
         showToast('Terhubung dengan pasangan!', 'success');
-        appendSystemMessage('Sistem: Koneksi P2P tersambung.');
-
-        sendData({ type: 'REQUEST_SYNC' });
+        updateTurnUI();
       });
-
-      conn.on('data', (data) => {
-        handleIncomingData(data);
-      });
-
-      conn.on('close', () => {
-        updateConnectionStatus(false);
-        showToast('Koneksi pasangan terputus.', 'warning');
-        appendSystemMessage('Sistem: Koneksi pasangan terputus.');
-      });
-
-      conn.on('error', (err) => {
-        console.error('Connection error:', err);
-        showToast('Gagal menyambung ke pasangan.', 'error');
-      });
+      conn.on('data', handleIncomingData);
+      conn.on('close', () => updateConnectionStatus(false));
     }
 
     function updateConnectionStatus(isConnected) {
-      const dot = document.getElementById('status-dot');
-      const text = document.getElementById('status-text');
+      document.getElementById('status-dot').className = isConnected ? 'w-2 h-2 rounded-full bg-emerald-500' : 'w-2 h-2 rounded-full bg-amber-500';
+      document.getElementById('status-text').innerText = isConnected ? 'Terhubung' : 'Belum Terhubung';
+    }
 
-      if (isConnected) {
-        dot.className = 'w-2 h-2 rounded-full bg-emerald-500';
-        text.innerText = 'Terhubung';
-        text.className = 'text-emerald-400';
-      } else {
-        dot.className = 'w-2 h-2 rounded-full bg-amber-500';
-        text.innerText = 'Belum Terhubung';
-        text.className = 'text-slate-400';
+    function sendData(data) { if (conn && conn.open) conn.send(data); }
+
+    function switchMainTab(tab) {
+      document.getElementById('section-media').classList.toggle('hidden', tab !== 'media');
+      document.getElementById('section-game').classList.toggle('hidden', tab !== 'game');
+      document.getElementById('tab-btn-media').className = tab === 'media' ? 'px-4 py-1.5 rounded-md text-xs font-semibold bg-indigo-600 text-white transition-all' : 'px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all';
+      document.getElementById('tab-btn-game').className = tab === 'game' ? 'px-4 py-1.5 rounded-md text-xs font-semibold bg-indigo-600 text-white transition-all' : 'px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all';
+    }
+
+    /* --- GAME ULAR TANGGA LOGIC --- */
+    function initBoard() {
+      const grid = document.getElementById('board-grid');
+      grid.innerHTML = '';
+      for (let i = 25; i >= 1; i--) {
+        const cell = document.createElement('div');
+        cell.id = `cell-${i}`;
+        cell.className = 'bg-slate-800 border border-slate-700/60 rounded flex flex-col justify-between p-1 relative text-[10px] font-mono text-slate-400';
+        
+        let label = `${i}`;
+        if (snakesAndLadders[i]) {
+          label += snakesAndLadders[i] > i ? ' 🪜' : ' 🐍';
+        }
+        cell.innerHTML = `<span>${label}</span><div id="tokens-${i}" class="flex gap-1 justify-center items-center"></div>`;
+        grid.appendChild(cell);
+      }
+      renderTokens();
+    }
+
+    function renderTokens() {
+      for (let i = 1; i <= 25; i++) {
+        const tokenBox = document.getElementById(`tokens-${i}`);
+        if (tokenBox) tokenBox.innerHTML = '';
+      }
+
+      const p1Box = document.getElementById(`tokens-${p1Pos}`);
+      if (p1Box) p1Box.innerHTML += `<span class="w-3.5 h-3.5 bg-indigo-500 rounded-full border border-white text-[8px] flex items-center justify-center font-bold text-white shadow">P1</span>`;
+
+      const p2Box = document.getElementById(`tokens-${p2Pos}`);
+      if (p2Box) p2Box.innerHTML += `<span class="w-3.5 h-3.5 bg-rose-500 rounded-full border border-white text-[8px] flex items-center justify-center font-bold text-white shadow">P2</span>`;
+
+      document.getElementById('p1-pos').innerText = `Petak ${p1Pos}`;
+      document.getElementById('p2-pos').innerText = `Petak ${p2Pos}`;
+    }
+
+    function rollDice() {
+      if (!isMyTurn) return showToast('Tunggu giliran pasangan Anda!', 'warning');
+
+      const dice = Math.floor(Math.random() * 6) + 1;
+      document.getElementById('dice-num').innerText = dice;
+      document.getElementById('dice-result').classList.remove('hidden');
+
+      executeMove(myRole, dice);
+      sendData({ type: 'GAME_MOVE', role: myRole, dice: dice });
+
+      isMyTurn = false;
+      updateTurnUI();
+    }
+
+    function executeMove(role, dice) {
+      let currentPos = role === 'P1' ? p1Pos : p2Pos;
+      let newPos = currentPos + dice;
+
+      if (newPos > 25) newPos = 25;
+
+      if (snakesAndLadders[newPos]) {
+        const dest = snakesAndLadders[newPos];
+        showToast(`${role} hinggap di ${dest > newPos ? 'Tangga 🪜' : 'Ular 🐍'}!`, 'info');
+        newPos = dest;
+      }
+
+      if (role === 'P1') p1Pos = newPos;
+      else p2Pos = newPos;
+
+      renderTokens();
+
+      const challenge = challenges[(newPos + dice) % challenges.length];
+      document.getElementById('challenge-box').innerText = `Petak ${newPos}: "${challenge}"`;
+
+      if (newPos === 25) {
+        showToast(`🎉 ${role} MEMENANGKAN PERMAINAN!`, 'success');
+        document.getElementById('challenge-box').innerText = `🎉 ${role} menang! Beri hukuman/keinginan spesial!`;
       }
     }
 
-    function sendData(data) {
-      if (conn && conn.open) {
-        conn.send(data);
-      }
+    function updateTurnUI() {
+      const activeRole = isMyTurn ? myRole : (myRole === 'P1' ? 'P2' : 'P1');
+      document.getElementById('current-turn-display').innerText = activeRole === myRole ? 'Giliran Anda' : 'Giliran Pasangan';
+      document.getElementById('roll-dice-btn').disabled = !isMyTurn;
+      document.getElementById('roll-dice-btn').className = isMyTurn ? 'w-full bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 rounded-md text-xs shadow-lg transition-all' : 'w-full bg-slate-800 text-slate-500 font-semibold py-2.5 rounded-md text-xs cursor-not-allowed';
     }
 
-    function sendSyncSignal(action) {
-      sendData({ type: 'SYNC_SIGNAL', action: action });
-      showToast('Aba-aba dikirim ke pasangan.', 'info');
+    function resetGame() {
+      p1Pos = 1; p2Pos = 1;
+      renderTokens();
+      document.getElementById('challenge-box').innerText = "Game telah di-reset.";
+      sendData({ type: 'GAME_RESET' });
     }
 
-    // --- 2. LOGIKA HANDLING DATA MASUK ---
+    /* --- INCOMING DATA HANDLER --- */
     function handleIncomingData(data) {
-      isRemoteAction = true;
-
-      switch (data.type) {
-        case 'REQUEST_SYNC':
-          if (currentMode === 'yt') {
-            sendData({ type: 'SYNC_RESPONSE', mode: 'yt', videoId: currentVideoId });
-          } else if (currentMode === 'vimeo') {
-            sendData({ type: 'SYNC_RESPONSE', mode: 'vimeo', videoId: currentVideoId });
-          } else {
-            sendData({
-              type: 'SYNC_RESPONSE',
-              mode: 'direct',
-              url: currentDirectUrl,
-              time: html5Player.currentTime,
-              isPlaying: !html5Player.paused
-            });
-          }
-          break;
-
-        case 'SYNC_RESPONSE':
-          if (data.mode === 'yt') {
-            setYouTubeEmbed(data.videoId);
-          } else if (data.mode === 'vimeo') {
-            setVimeoEmbed(data.videoId);
-          } else if (data.mode === 'direct') {
-            setDirectVideoEmbed(data.url);
-            html5Player.currentTime = data.time;
-            if (data.isPlaying) html5Player.play();
-          }
-          break;
-
-        case 'SYNC_SIGNAL':
-          if (data.action === 'PLAY') {
-            showToast('Pasangan memberi aba-aba: TEKAN PLAY SEKARANG!', 'warning');
-            appendSystemMessage('Aba-aba Pasangan: Tekan tombol Play di video!');
-          } else if (data.action === 'PAUSE') {
-            showToast('Pasangan memberi aba-aba: TEKAN PAUSE!', 'warning');
-            appendSystemMessage('Aba-aba Pasangan: Pause video!');
-          }
-          break;
-
-        case 'PLAYER_PLAY':
-          if (currentMode === 'direct' && html5Player) {
-            if (Math.abs(html5Player.currentTime - data.time) > 1.2) {
-              html5Player.currentTime = data.time;
-            }
-            html5Player.play();
-          }
-          break;
-
-        case 'PLAYER_PAUSE':
-          if (currentMode === 'direct' && html5Player) {
-            html5Player.currentTime = data.time;
-            html5Player.pause();
-          }
-          break;
-
-        case 'PLAYER_SEEK':
-          if (currentMode === 'direct' && html5Player) {
-            html5Player.currentTime = data.time;
-          }
-          break;
-
-        case 'CHANGE_VIDEO':
-          if (data.mode === 'yt') {
-            setYouTubeEmbed(data.videoId);
-          } else if (data.mode === 'vimeo') {
-            setVimeoEmbed(data.videoId);
-          } else if (data.mode === 'direct') {
-            setDirectVideoEmbed(data.url);
-          }
-          appendSystemMessage(`Sistem: Pasangan mengganti video.`);
-          showToast('Video diganti oleh pasangan.', 'info');
-          break;
-
-        case 'CHAT':
-          appendChatMessage(data.text, 'partner', data.time);
-          break;
-
-        case 'EMOJI':
-          triggerFloatingEmoji(data.emoji);
-          break;
-
-        case 'TYPING':
-          showPartnerTyping();
-          break;
+      if (data.type === 'MEDIA_STATE') {
+        window.isRemoteEvent = true;
+        if (Math.abs(html5Player.currentTime - data.time) > 1.5) html5Player.currentTime = data.time;
+        if (data.action === 'PLAY') html5Player.play();
+        if (data.action === 'PAUSE') html5Player.pause();
       }
+      if (data.type === 'CHANGE_URL') loadVideoUrl(data.url, false);
+      if (data.type === 'STOP_SCREENSHARE') switchToVideoView();
+      if (data.type === 'CHAT') appendChatMessage(data.text, 'partner');
+      if (data.type === 'EMOJI') triggerFloatingEmoji(data.emoji);
 
-      setTimeout(() => { isRemoteAction = false; }, 500);
+      if (data.type === 'GAME_MOVE') {
+        document.getElementById('dice-num').innerText = data.dice;
+        document.getElementById('dice-result').classList.remove('hidden');
+        executeMove(data.role, data.dice);
+        isMyTurn = true;
+        updateTurnUI();
+      }
+      if (data.type === 'GAME_RESET') {
+        p1Pos = 1; p2Pos = 1;
+        renderTokens();
+        document.getElementById('challenge-box').innerText = "Pasangan mengulang permainan.";
+      }
     }
 
-    // --- 3. KONTROL USER ---
+    /* --- MEDIA HANDLERS --- */
+    function triggerAction(act) {
+      if (act === 'PLAY') { html5Player.play(); }
+      else if (act === 'PAUSE') { html5Player.pause(); }
+      sendData({ type: 'MEDIA_STATE', action: act, time: html5Player.currentTime });
+    }
+
+    async function toggleScreenShare() {
+      if (localStream) { stopScreenShare(); return; }
+      if (!conn || !conn.open) return showToast('Hubungkan ke pasangan terlebih dahulu!', 'warning');
+
+      try {
+        localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+        switchToScreenShareView(localStream);
+        mediaCall = peer.call(conn.peer, localStream);
+        document.getElementById('screenshare-label').innerText = 'Hentikan Share';
+        localStream.getVideoTracks()[0].onended = () => stopScreenShare();
+      } catch (err) { showToast('Gagal membagikan layar', 'error'); }
+    }
+
+    function stopScreenShare() {
+      if (localStream) { localStream.getTracks().forEach(t => t.stop()); localStream = null; }
+      if (mediaCall) { mediaCall.close(); mediaCall = null; }
+      sendData({ type: 'STOP_SCREENSHARE' });
+      switchToVideoView();
+      document.getElementById('screenshare-label').innerText = 'Share Screen';
+    }
+
+    function switchToScreenShareView(stream) {
+      html5Player.pause();
+      html5Player.classList.add('hidden');
+      screenPlayer.classList.remove('hidden');
+      screenPlayer.srcObject = stream;
+    }
+
+    function switchToVideoView() {
+      screenPlayer.pause();
+      screenPlayer.srcObject = null;
+      screenPlayer.classList.add('hidden');
+      html5Player.classList.remove('hidden');
+    }
+
     function changeVideoHandler(e) {
       e.preventDefault();
-      const input = document.getElementById('video-url-input');
-      const url = input.value.trim();
-      if (!url) return;
-
-      const ytId = extractYouTubeId(url);
-      const vimeoId = extractVimeoId(url);
-
-      if (ytId) {
-        loadYouTubeVideo(ytId);
-      } else if (vimeoId) {
-        loadVimeoVideo(vimeoId);
-      } else if (url.startsWith('http://') || url.startsWith('https://')) {
-        loadDirectVideo(url);
-      } else {
-        showToast('URL tidak valid.', 'error');
-      }
-
-      input.value = '';
+      const url = document.getElementById('video-url-input').value.trim();
+      if (url) { loadVideoUrl(url, true); document.getElementById('video-url-input').value = ''; }
     }
 
-    function loadSampleVideo(source, type) {
-      if (type === 'yt') {
-        loadYouTubeVideo(source);
-      } else if (type === 'vimeo') {
-        loadVimeoVideo(source);
-      } else {
-        loadDirectVideo(source);
-      }
-    }
+    function loadPreset(url) { loadVideoUrl(url, true); }
 
-    function loadYouTubeVideo(videoId) {
-      setYouTubeEmbed(videoId);
-      sendData({ type: 'CHANGE_VIDEO', mode: 'yt', videoId: videoId });
-      showToast('Video YouTube dimuat.', 'success');
-    }
-
-    function loadVimeoVideo(vimeoId) {
-      setVimeoEmbed(vimeoId);
-      sendData({ type: 'CHANGE_VIDEO', mode: 'vimeo', videoId: vimeoId });
-      showToast('Video Vimeo dimuat.', 'success');
-    }
-
-    function loadDirectVideo(url) {
-      setDirectVideoEmbed(url);
-      sendData({ type: 'CHANGE_VIDEO', mode: 'direct', url: url });
-      showToast('Video MP4 dimuat.', 'success');
-    }
-
-    function extractYouTubeId(url) {
-      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = url.match(regExp);
-      return (match && match[2].length === 11) ? match[2] : null;
-    }
-
-    function extractVimeoId(url) {
-      const regExp = /(?:vimeo)\.com\/(?:channels\/(?:\w+\/)?|groups\/[^\/]*\/videos\/|album\/\d+\/video\/|video\/|)(\d+)/;
-      const match = url.match(regExp);
-      return match ? match[1] : null;
+    function loadVideoUrl(url, notifyPartner) {
+      if (localStream) stopScreenShare();
+      switchToVideoView();
+      html5Player.src = url;
+      html5Player.load();
+      html5Player.play().catch(()=>{});
+      if (notifyPartner) sendData({ type: 'CHANGE_URL', url: url });
     }
 
     function sendChatHandler(e) {
       e.preventDefault();
       const input = document.getElementById('chat-input');
-      const text = input.value.trim();
-      if (!text) return;
-
-      const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-      appendChatMessage(text, 'me', timeStr);
-      sendData({ type: 'CHAT', text: text, time: timeStr });
-
+      if (!input.value.trim()) return;
+      appendChatMessage(input.value.trim(), 'me');
+      sendData({ type: 'CHAT', text: input.value.trim() });
       input.value = '';
     }
 
-    function handleTyping() {
-      sendData({ type: 'TYPING' });
+    function appendChatMessage(text, sender) {
+      const chatBox = document.getElementById('chat-messages');
+      const div = document.createElement('div');
+      div.className = `flex flex-col ${sender === 'me' ? 'items-end' : 'items-start'} my-1`;
+      div.innerHTML = `<div class="px-3 py-2 rounded max-w-[85%] ${sender === 'me' ? 'bg-indigo-600 text-white' : 'bg-slate-900 border border-slate-800'}">${text}</div>`;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    function showPartnerTyping() {
-      const el = document.getElementById('typing-indicator');
-      el.classList.remove('hidden');
-      clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => {
-        el.classList.add('hidden');
-      }, 2000);
-    }
-
-    function sendEmoji(emoji) {
-      triggerFloatingEmoji(emoji);
-      sendData({ type: 'EMOJI', emoji: emoji });
-    }
-
-    // --- 4. TAMPILAN PADA LAYAR ---
-    function triggerFloatingEmoji(emoji) {
+    function sendEmoji(e) { triggerFloatingEmoji(e); sendData({ type: 'EMOJI', emoji: e }); }
+    function triggerFloatingEmoji(e) {
       const overlay = document.getElementById('emoji-overlay');
       const el = document.createElement('div');
-      el.innerText = emoji;
-
-      const randomLeft = Math.floor(Math.random() * 70) + 15;
-      el.style.left = randomLeft + '%';
+      el.innerText = e;
+      el.className = 'absolute text-3xl pointer-events-none transition-all duration-1000 ease-out opacity-100';
+      el.style.left = (Math.random() * 70 + 15) + '%';
       el.style.bottom = '15px';
-      el.className = 'absolute text-3xl sm:text-4xl pointer-events-none select-none transition-all duration-1000 ease-out transform translate-y-0 opacity-100';
-
       overlay.appendChild(el);
-
-      requestAnimationFrame(() => {
-        setTimeout(() => {
-          el.style.transform = 'translateY(-160px) scale(1.2)';
-          el.style.opacity = '0';
-        }, 50);
-      });
-
-      setTimeout(() => { el.remove(); }, 1100);
+      requestAnimationFrame(() => { setTimeout(() => { el.style.transform = 'translateY(-140px)'; el.style.opacity = '0'; }, 50); });
+      setTimeout(() => el.remove(), 1100);
     }
 
-    function appendChatMessage(text, sender, time = '') {
-      const chatBox = document.getElementById('chat-messages');
-      const wrapper = document.createElement('div');
-      const isMe = sender === 'me';
+    function copyMyId() { navigator.clipboard.writeText(document.getElementById('my-id').innerText); showToast('ID Disalin!', 'success'); }
 
-      wrapper.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'} my-1`;
-
-      const msgBubble = document.createElement('div');
-      msgBubble.className = `px-3 py-2 rounded max-w-[85%] break-words leading-relaxed ${
-        isMe
-          ? 'bg-indigo-600 text-white'
-          : 'bg-slate-900 text-slate-200 border border-slate-800'
-      }`;
-      msgBubble.innerText = text;
-
-      const timeStamp = document.createElement('span');
-      timeStamp.className = 'text-[10px] text-slate-500 mt-1';
-      timeStamp.innerText = time || new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-
-      wrapper.appendChild(msgBubble);
-      wrapper.appendChild(timeStamp);
-      chatBox.appendChild(wrapper);
-
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    function appendSystemMessage(text) {
-      const chatBox = document.getElementById('chat-messages');
-      const msg = document.createElement('div');
-      msg.className = 'bg-slate-900/40 border border-slate-800/60 text-slate-500 text-[11px] p-2 rounded text-center my-1';
-      msg.innerText = text;
-      chatBox.appendChild(msg);
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    // Utility: Copy ID
-    function copyMyId() {
-      const myId = document.getElementById('my-id').innerText;
-      if (!myId || myId === 'Menghubungkan...' || myId === 'Gagal Server') return;
-
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(myId).then(() => {
-          showToast('ID berhasil disalin.', 'success');
-        }).catch(() => {
-          fallbackCopy(myId);
-        });
-      } else {
-        fallbackCopy(myId);
-      }
-    }
-
-    function fallbackCopy(text) {
-      const input = document.createElement('input');
-      input.value = text;
-      document.body.appendChild(input);
-      input.select();
-      document.execCommand('copy');
-      document.body.removeChild(input);
-      showToast('ID berhasil disalin.', 'success');
-    }
-
-    // Utility: Custom Toast System
-    function showToast(message, type = 'info') {
+    function showToast(msg, type) {
       const container = document.getElementById('toast-container');
-      const toast = document.createElement('div');
-
-      const bgColors = {
-        success: 'bg-slate-900 border-slate-700 text-emerald-400',
-        error: 'bg-slate-900 border-slate-700 text-rose-400',
-        warning: 'bg-slate-900 border-slate-700 text-amber-400',
-        info: 'bg-slate-900 border-slate-800 text-slate-200'
-      };
-
-      toast.className = `px-3.5 py-2 rounded border text-xs font-medium shadow-lg backdrop-blur flex items-center transition-all duration-200 transform translate-y-[-5px] opacity-0 ${bgColors[type] || bgColors.info}`;
-      toast.innerHTML = `<span>${message}</span>`;
-
-      container.appendChild(toast);
-
-      requestAnimationFrame(() => {
-        toast.classList.remove('translate-y-[-5px]', 'opacity-0');
-      });
-
-      setTimeout(() => {
-        toast.classList.add('opacity-0', 'translate-y-[-5px]');
-        setTimeout(() => { toast.remove(); }, 200);
-      }, 2500);
+      const t = document.createElement('div');
+      t.className = 'px-3.5 py-2 rounded border text-xs bg-slate-900 border-slate-700 text-slate-200 shadow-lg';
+      t.innerText = msg;
+      container.appendChild(t);
+      setTimeout(() => t.remove(), 2500);
     }
   </script>
 </body>
