@@ -3,439 +3,227 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Nobar Space - Multi-Signaling & Video Sync</title>
+  <title>Nobar Space - Co-Watching App</title>
+  
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- Load Trystero Torrent Strategy -->
-  <script type="importmap">
-    {
-      "imports": {
-        "trystero": "https://cdn.jsdelivr.net/npm/trystero@0.18.2/torrent.js"
-      }
-    }
-  </script>
-  <style>
-    iframe, video { width: 100% !important; height: 100% !important; min-height: 280px; border: 0; object-fit: contain; }
-  </style>
+  
+  <!-- Trystero Nostr Strategy (Lebih stabil untuk GitHub Pages / HTTPS) -->
+  <script src="https://cdn.jsdelivr.net/npm/trystero@0.18.2/dist/trystero-nostr.min.js"></script>
 </head>
-<body class="bg-slate-950 text-slate-100 font-sans h-screen flex flex-col overflow-hidden antialiased">
-  <div id="toast-container" class="fixed top-4 right-4 z-50 flex flex-col gap-2 pointer-events-none"></div>
+<body class="bg-slate-900 text-white min-h-screen flex flex-col items-center justify-center p-4">
 
-  <!-- Header Navigation -->
-  <header class="bg-slate-900 border-b border-slate-800 px-4 py-3 flex flex-wrap items-center justify-between gap-3 z-10">
-    <div class="flex items-center gap-3">
-      <div class="w-2.5 h-2.5 rounded-full bg-emerald-500"></div>
-      <div>
-        <h1 class="font-semibold text-sm sm:text-base leading-none text-slate-100">NOBAR SPACE (Room System)</h1>
-        <p class="text-[11px] text-slate-400 mt-1">YouTube Sync, Screen Share & Romantic Games</p>
+  <!-- Container Utama -->
+  <div class="w-full max-w-4xl bg-slate-800 rounded-xl shadow-2xl overflow-hidden border border-slate-700">
+    
+    <!-- Header & Indikator Koneksi -->
+    <div class="p-4 bg-slate-950 flex flex-wrap justify-between items-center border-b border-slate-700 gap-4">
+      <h1 class="text-xl font-bold text-indigo-400 flex items-center gap-2">
+        🎬 Nobar Space
+      </h1>
+      <div id="connection-status" class="flex items-center gap-2 text-sm text-yellow-400 font-medium bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800">
+        <span class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span>
+        Belum Terhubung
       </div>
     </div>
 
-    <!-- Room-based Connection System -->
-    <div class="flex flex-wrap items-center gap-2 text-xs">
-      <div class="flex items-center gap-1.5">
-        <input id="room-id-input" type="text" placeholder="Nama Ruangan Rahasia..." class="bg-slate-950 border border-slate-800 rounded-md px-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500 w-44 sm:w-56" value="ruang-cinta-123">
-        <button onclick="joinRoom()" class="bg-rose-600 hover:bg-rose-500 text-white font-medium px-3.5 py-1.5 rounded-md">Gabung Ruangan</button>
+    <!-- Panel Kontrol Ruangan & Input Video -->
+    <div class="p-4 bg-slate-800 border-b border-slate-700 grid grid-cols-1 md:grid-cols-2 gap-4">
+      <!-- Input Room ID -->
+      <div class="flex gap-2">
+        <input type="text" id="room-id-input" placeholder="Masukkan Nama Ruangan (mis: nobar-kita)" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500">
+        <button onclick="joinRoom()" class="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-semibold transition-colors shrink-0">
+          Masuk
+        </button>
       </div>
 
-      <div id="status-badge" class="flex items-center gap-2 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-md font-medium text-slate-400">
-        <span id="status-dot" class="w-2 h-2 rounded-full bg-amber-500"></span>
-        <span id="status-text">Menunggu Pasangan...</span>
+      <!-- Input URL Video -->
+      <div class="flex gap-2">
+        <input type="text" id="video-url-input" placeholder="URL Video (.mp4 / direct link)" class="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-lg text-sm text-white focus:outline-none focus:border-indigo-500">
+        <button onclick="changeMediaUrl()" class="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-lg text-sm font-semibold transition-colors shrink-0">
+          Muat Video
+        </button>
       </div>
     </div>
-  </header>
 
-  <!-- Main View -->
-  <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
-    <div class="flex-1 flex flex-col p-4 bg-slate-900/30 overflow-y-auto">
-      
-      <!-- Tab Controller: Player / Games -->
-      <div class="flex items-center justify-between gap-2 mb-3 bg-slate-900 p-1.5 rounded-lg border border-slate-800">
-        <div class="flex items-center gap-1">
-          <button id="tab-btn-media" onclick="switchMainTab('media')" class="px-4 py-1.5 rounded-md text-xs font-semibold bg-rose-600 text-white transition-all">📺 YouTube & Screen Share</button>
-          <button id="tab-btn-game" onclick="switchMainTab('game')" class="px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all">💖 Romantic Truth or Dare</button>
-        </div>
-      </div>
-
-      <!-- SECTION 1: MEDIA PLAYER & SHARE SCREEN -->
-      <div id="section-media" class="flex-1 flex flex-col">
-        <div class="flex flex-wrap sm:flex-nowrap gap-2 mb-2">
-          <form onsubmit="changeVideoHandler(event)" class="flex-1 flex gap-2">
-            <input id="video-url-input" type="text" placeholder="Tempel URL Video YouTube atau MP4..." class="flex-1 bg-slate-900 border border-slate-800 rounded-md px-3.5 py-2 text-xs sm:text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500">
-            <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white font-medium text-xs sm:text-sm px-4 py-2 rounded-md">Putar Video</button>
-          </form>
-          <button id="screenshare-btn" onclick="toggleScreenShare()" class="bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs sm:text-sm px-4 py-2 rounded-md flex items-center gap-2 shrink-0">
-            <span>🖥️</span> <span id="screenshare-label">Share Screen</span>
-          </button>
-        </div>
-
-        <div class="flex items-center gap-2 mb-3 text-xs overflow-x-auto pb-1">
-          <span class="text-slate-500 shrink-0">Contoh YouTube:</span>
-          <button onclick="loadPreset('https://www.youtube.com/watch?v=jfKfPfyJRdk')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded text-slate-300 shrink-0">Lofi Girl Stream</button>
-          <button onclick="loadPreset('https://www.youtube.com/watch?v=dQw4w9WgXcQ')" class="bg-slate-800 hover:bg-slate-700 px-2.5 py-1 rounded text-slate-300 shrink-0">Musik Video</button>
-        </div>
-
-        <!-- Player Container -->
-        <div class="flex-1 bg-black rounded-lg overflow-hidden relative shadow-2xl min-h-[300px] flex items-center justify-center border border-slate-800">
-          <div id="yt-player-container" class="w-full h-full">
-            <div id="yt-player"></div>
-          </div>
-          <video id="html5-player" class="hidden w-full h-full bg-black" controls controlsList="nodownload">
-            <source id="video-source" src="" type="video/mp4">
-          </video>
-          <video id="screenshare-player" class="hidden w-full h-full bg-black" autoplay playsinline controls></video>
-          <div id="emoji-overlay" class="absolute inset-0 pointer-events-none overflow-hidden z-20"></div>
-        </div>
-
-        <div class="flex items-center justify-between gap-2 mt-3 p-2 bg-slate-900 border border-slate-800 rounded-lg">
-          <div class="flex items-center gap-2">
-            <button onclick="triggerAction('PLAY')" class="bg-emerald-600 hover:bg-emerald-500 text-white text-xs px-3.5 py-1.5 rounded font-medium">▶ Play Bersama</button>
-            <button onclick="triggerAction('PAUSE')" class="bg-rose-600 hover:bg-rose-500 text-white text-xs px-3.5 py-1.5 rounded font-medium">⏸ Pause Bersama</button>
-          </div>
-          <div class="flex items-center gap-2">
-            <button onclick="sendEmoji('❤️')" class="text-lg p-1 hover:bg-slate-800 rounded">❤️</button>
-            <button onclick="sendEmoji('💖')" class="text-lg p-1 hover:bg-slate-800 rounded">💖</button>
-            <button onclick="sendEmoji('🥰')" class="text-lg p-1 hover:bg-slate-800 rounded">🥰</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- SECTION 2: GAME ULAR TANGGA -->
-      <div id="section-game" class="hidden flex-1 flex flex-col lg:flex-row gap-4">
-        <div class="flex-1 flex flex-col items-center justify-center bg-slate-950 p-3 rounded-lg border border-slate-800">
-          <div class="w-full max-w-[420px] aspect-square grid grid-cols-5 gap-1.5 p-2 bg-slate-900 rounded-lg border border-slate-800 relative" id="board-grid"></div>
-        </div>
-
-        <div class="w-full lg:w-80 bg-slate-900 border border-slate-800 rounded-lg p-4 flex flex-col justify-between gap-4">
-          <div>
-            <div class="flex items-center gap-2 mb-2">
-              <span class="text-lg">💖</span>
-              <h2 class="font-semibold text-sm text-rose-400">Romantic Truth or Dare</h2>
-            </div>
-            <p class="text-xs text-slate-400 mb-4">Ular Tangga khusus untuk mempererat hubungan dan memperbanyak momen manis.</p>
-            
-            <div class="space-y-2 mb-4 text-xs">
-              <div class="flex justify-between p-2 rounded bg-slate-950 border border-slate-800">
-                <span class="text-rose-400 font-medium">Pemain 1:</span>
-                <span id="p1-pos" class="font-bold">Petak 1</span>
-              </div>
-              <div class="flex justify-between p-2 rounded bg-slate-950 border border-slate-800">
-                <span class="text-indigo-400 font-medium">Pemain 2:</span>
-                <span id="p2-pos" class="font-bold">Petak 1</span>
-              </div>
-            </div>
-
-            <div class="p-3 bg-rose-950/40 border border-rose-800/50 rounded-lg">
-              <div class="flex items-center justify-between mb-1">
-                <span id="challenge-type" class="text-[11px] text-rose-300 font-semibold uppercase tracking-wider">Tantangan Aktif ⚡</span>
-              </div>
-              <div id="challenge-box" class="text-xs font-medium text-slate-200 min-h-[56px] flex items-center leading-relaxed">
-                Kocok dadu untuk memulai tantangan romantis bersama pasangan!
-              </div>
-            </div>
-          </div>
-
-          <div class="space-y-2">
-            <div id="dice-result" class="text-center font-bold text-2xl py-1 text-amber-400 hidden">🎲 <span id="dice-num">1</span></div>
-            <button id="roll-dice-btn" onclick="rollDice()" class="w-full bg-rose-600 hover:bg-rose-500 text-white font-semibold py-2.5 rounded-md text-xs shadow-lg transition-all">
-              🎲 Kocok Dadu
-            </button>
-            <button onclick="resetGame()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs py-1.5 rounded-md">
-              Reset Permainan
-            </button>
-          </div>
-        </div>
-      </div>
-
+    <!-- Area Video Player -->
+    <div class="relative bg-black aspect-video flex items-center justify-center">
+      <video id="media-player" class="w-full h-full" controls crossorigin="anonymous">
+        <source id="video-source" src="" type="video/mp4">
+        Browser Anda tidak mendukung pemutar video HTML5.
+      </video>
     </div>
 
-    <!-- Chat Sidebar -->
-    <div class="w-full lg:w-80 bg-slate-950 border-t lg:border-t-0 lg:border-l border-slate-800 flex flex-col h-64 lg:h-full shrink-0">
-      <div class="px-4 py-3 border-b border-slate-800 font-medium text-xs text-slate-300">OBROLAN REAL-TIME</div>
-      <div id="chat-messages" class="flex-1 p-4 overflow-y-auto space-y-3 text-xs">
-        <div class="bg-slate-900 border border-slate-800 text-slate-400 p-3 rounded text-center">Masukkan Nama Ruangan yang sama dengan pasangan untuk otomatis terhubung.</div>
+    <!-- Area Log & Chat -->
+    <div class="p-4 bg-slate-950 border-t border-slate-700">
+      <h2 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Log Aktivitas</h2>
+      <div id="activity-log" class="h-28 overflow-y-auto bg-slate-900 p-3 rounded-lg text-xs space-y-1 font-mono text-slate-300 border border-slate-800">
+        <div>[System] Silakan masukkan nama ruangan untuk memulai.</div>
       </div>
-      <form onsubmit="sendChatHandler(event)" class="p-3 border-t border-slate-800 flex gap-2">
-        <input id="chat-input" type="text" placeholder="Tulis pesan..." class="flex-1 bg-slate-900 border border-slate-800 rounded px-3 py-2 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-rose-500">
-        <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white px-4 py-2 rounded text-xs font-medium">Kirim</button>
-      </form>
     </div>
   </div>
 
-  <script src="https://www.youtube.com/iframe_api"></script>
+  <!-- Toast Notification -->
+  <div id="toast" class="fixed bottom-5 right-5 hidden px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all transform translate-y-2"></div>
 
-  <script type="module">
-    import { joinRoom as trysteroJoinRoom } from 'trystero';
+  <!-- Application Logic -->
+  <script>
+    // Inisialisasi Trystero dari global CDN
+    const { joinRoom: trysteroJoinRoom } = window.trysteroNostr;
+    
+    let room = null;
+    let sendMediaState = null;
+    let getMediaState = null;
+    let sendChangeUrl = null;
+    let getChangeUrl = null;
+    let isRemoteAction = false;
 
-    let room, sendMediaState, getMediaState;
-    let sendChangeUrl, getChangeUrl;
-    let sendChat, getChat;
-    let sendEmojiAction, getEmojiAction;
-    let sendGameMove, getGameMove;
-    let sendStream, addStream;
+    const player = document.getElementById('media-player');
+    const logContainer = document.getElementById('activity-log');
+    const statusDiv = document.getElementById('connection-status');
 
-    let html5Player, screenPlayer, localStream = null;
-    let ytPlayer = null, activeMode = 'youtube';
-    let p1Pos = 1, p2Pos = 1, myRole = 'P1';
-
-    const challenges = [
-      { type: "TRUTH", text: "Apa kesan pertamamu saat melihatku, dan kapan kamu sadar kamu menyukaiku?" },
-      { type: "DARE", text: "Tatap mata pasanganmu secara langsung selama 30 detik tanpa tertawa." },
-      { type: "TRUTH", text: "Hal kecil apa yang sering aku lakukan tanpa sadar yang membuatmu merasa dicintai?" },
-      { type: "DARE", text: "Kirimkan pesan suara (voice note) singkat berisi 3 pujian manis untuk pasanganmu." },
-      { type: "TRUTH", text: "Dari semua kencan atau momen bersama, mana yang paling berkesan dan ingin kamu ulang?" },
-      { type: "DARE", text: "Pegang tangan pasanganmu (atau tunjukkan gestur hangat) dan sebutkan hal yang paling kamu syukuri darinya." }
-    ];
-
-    const snakesAndLadders = { 4: 10, 9: 15, 14: 6, 19: 8, 22: 17 };
-
-    window.onYouTubeIframeAPIReady = function() {
-      ytPlayer = new YT.Player('yt-player', {
-        height: '100%',
-        width: '100%',
-        videoId: 'jfKfPfyJRdk',
-        playerVars: { 'autoplay': 0, 'controls': 1, 'rel': 0 },
-        events: {
-          'onStateChange': onYTPlayerStateChange
-        }
-      });
-    };
-
-    function onYTPlayerStateChange(event) {
-      if (window.isRemoteEvent) { window.isRemoteEvent = false; return; }
-      if (event.data === YT.PlayerState.PLAYING && sendMediaState) {
-        sendMediaState({ mode: 'youtube', action: 'PLAY', time: ytPlayer.getCurrentTime() });
-      } else if (event.data === YT.PlayerState.PAUSED && sendMediaState) {
-        sendMediaState({ mode: 'youtube', action: 'PAUSE', time: ytPlayer.getCurrentTime() });
-      }
+    function log(message) {
+      const entry = document.createElement('div');
+      const time = new Date().toLocaleTimeString();
+      entry.textContent = `[${time}] ${message}`;
+      logContainer.appendChild(entry);
+      logContainer.scrollTop = logContainer.scrollHeight;
     }
 
-    window.joinRoom = function() {
-      const roomName = document.getElementById('room-id-input').value.trim();
-      if (!roomName) return showToast('Masukkan Nama Ruangan', 'warning');
-
-      const config = { appId: 'nobar-space-romantic-app' };
-      room = trysteroJoinRoom(config, roomName);
-
-      room.onPeerJoin(peerId => {
-        updateConnectionStatus(true);
-        showToast('Pasangan terhubung ke ruangan!', 'success');
-      });
-
-      room.onPeerLeave(peerId => {
-        updateConnectionStatus(false);
-        showToast('Pasangan terputus dari ruangan', 'warning');
-      });
-
-      // Define Actions
-      [sendMediaState, getMediaState] = room.makeAction('mediaState');
-      [sendChangeUrl, getChangeUrl] = room.makeAction('changeUrl');
-      [sendChat, getChat] = room.makeAction('chat');
-      [sendEmojiAction, getEmojiAction] = room.makeAction('emoji');
-      [sendGameMove, getGameMove] = room.makeAction('gameMove');
-
-      // Listeners
-      getMediaState((data) => {
-        window.isRemoteEvent = true;
-        if (data.mode === 'youtube' && ytPlayer && ytPlayer.playVideo) {
-          if (Math.abs(ytPlayer.getCurrentTime() - data.time) > 1.5) ytPlayer.seekTo(data.time, true);
-          if (data.action === 'PLAY') ytPlayer.playVideo();
-          if (data.action === 'PAUSE') ytPlayer.pauseVideo();
-        }
-      });
-
-      getChangeUrl((url) => loadVideoUrl(url, false));
-      getChat((text) => appendChatMessage(text, 'partner'));
-      getEmojiAction((e) => triggerFloatingEmoji(e));
-      getGameMove((data) => {
-        document.getElementById('dice-num').innerText = data.dice;
-        document.getElementById('dice-result').classList.remove('hidden');
-        executeMove(data.role, data.dice);
-      });
-
-      addStream = room.addStream;
-      room.onStream((remoteStream) => switchToScreenShareView(remoteStream));
-
-      showToast(`Bergabung ke ruangan: ${roomName}`, 'success');
-    };
-
-    window.addEventListener('DOMContentLoaded', () => {
-      html5Player = document.getElementById('html5-player');
-      screenPlayer = document.getElementById('screenshare-player');
-      initBoard();
-      window.joinRoom();
-    });
+    function showToast(message, type = 'info') {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.className = `fixed bottom-5 right-5 px-4 py-3 rounded-lg shadow-lg text-sm font-medium transition-all ${
+        type === 'error' ? 'bg-red-600 text-white' : 
+        type === 'success' ? 'bg-emerald-600 text-white' : 'bg-indigo-600 text-white'
+      }`;
+      toast.classList.remove('hidden');
+      setTimeout(() => toast.classList.add('hidden'), 3000);
+    }
 
     function updateConnectionStatus(isConnected) {
-      document.getElementById('status-dot').className = isConnected ? 'w-2 h-2 rounded-full bg-emerald-500' : 'w-2 h-2 rounded-full bg-amber-500';
-      document.getElementById('status-text').innerText = isConnected ? 'Terhubung Bersama' : 'Menunggu Pasangan...';
-    }
-
-    window.switchMainTab = function(tab) {
-      document.getElementById('section-media').classList.toggle('hidden', tab !== 'media');
-      document.getElementById('section-game').classList.toggle('hidden', tab !== 'game');
-      document.getElementById('tab-btn-media').className = tab === 'media' ? 'px-4 py-1.5 rounded-md text-xs font-semibold bg-rose-600 text-white transition-all' : 'px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all';
-      document.getElementById('tab-btn-game').className = tab === 'game' ? 'px-4 py-1.5 rounded-md text-xs font-semibold bg-rose-600 text-white transition-all' : 'px-4 py-1.5 rounded-md text-xs font-semibold text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all';
-    };
-
-    function initBoard() {
-      const grid = document.getElementById('board-grid');
-      grid.innerHTML = '';
-      for (let i = 25; i >= 1; i--) {
-        const cell = document.createElement('div');
-        cell.id = `cell-${i}`;
-        cell.className = 'bg-slate-800 border border-slate-700/60 rounded flex flex-col justify-between p-1 relative text-[10px] font-mono text-slate-400';
-        let label = `${i}`;
-        if (snakesAndLadders[i]) label += snakesAndLadders[i] > i ? ' 🪜' : ' 🐍';
-        cell.innerHTML = `<span>${label}</span><div id="tokens-${i}" class="flex gap-1 justify-center items-center"></div>`;
-        grid.appendChild(cell);
+      if (isConnected) {
+        statusDiv.className = 'flex items-center gap-2 text-sm text-emerald-400 font-medium bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800';
+        statusDiv.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span> Pasangan Terhubung';
+      } else {
+        statusDiv.className = 'flex items-center gap-2 text-sm text-yellow-400 font-medium bg-slate-900 px-3 py-1.5 rounded-full border border-slate-800';
+        statusDiv.innerHTML = '<span class="w-2.5 h-2.5 rounded-full bg-yellow-400 animate-pulse"></span> Menunggu Pasangan...';
       }
-      renderTokens();
     }
 
-    function renderTokens() {
-      for (let i = 1; i <= 25; i++) {
-        const tokenBox = document.getElementById(`tokens-${i}`);
-        if (tokenBox) tokenBox.innerHTML = '';
-      }
-      const p1Box = document.getElementById(`tokens-${p1Pos}`);
-      if (p1Box) p1Box.innerHTML += `<span class="w-3.5 h-3.5 bg-rose-500 rounded-full border border-white text-[8px] flex items-center justify-center font-bold text-white shadow">P1</span>`;
-      const p2Box = document.getElementById(`tokens-${p2Pos}`);
-      if (p2Box) p2Box.innerHTML += `<span class="w-3.5 h-3.5 bg-indigo-500 rounded-full border border-white text-[8px] flex items-center justify-center font-bold text-white shadow">P2</span>`;
-      document.getElementById('p1-pos').innerText = `Petak ${p1Pos}`;
-      document.getElementById('p2-pos').innerText = `Petak ${p2Pos}`;
-    }
+    function joinRoom() {
+      const roomIdInput = document.getElementById('room-id-input');
+      const roomName = roomIdInput.value.trim();
 
-    window.rollDice = function() {
-      const dice = Math.floor(Math.random() * 6) + 1;
-      document.getElementById('dice-num').innerText = dice;
-      document.getElementById('dice-result').classList.remove('hidden');
-      executeMove(myRole, dice);
-      if (sendGameMove) sendGameMove({ role: myRole, dice: dice });
-    };
-
-    function executeMove(role, dice) {
-      let currentPos = role === 'P1' ? p1Pos : p2Pos;
-      let newPos = currentPos + dice;
-      if (newPos > 25) newPos = 25;
-      if (snakesAndLadders[newPos]) newPos = snakesAndLadders[newPos];
-      if (role === 'P1') p1Pos = newPos; else p2Pos = newPos;
-      renderTokens();
-      const item = challenges[(newPos + dice) % challenges.length];
-      document.getElementById('challenge-type').innerText = `${item.type} (PETAK ${newPos})`;
-      document.getElementById('challenge-box').innerText = `"${item.text}"`;
-    }
-
-    window.resetGame = function() {
-      p1Pos = 1; p2Pos = 1;
-      renderTokens();
-    };
-
-    function extractYouTubeId(url) {
-      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-      const match = url.match(regExp);
-      return (match && match[2].length === 11) ? match[2] : null;
-    }
-
-    window.triggerAction = function(act) {
-      if (activeMode === 'youtube' && ytPlayer && ytPlayer.playVideo) {
-        if (act === 'PLAY') ytPlayer.playVideo();
-        else if (act === 'PAUSE') ytPlayer.pauseVideo();
-        if (sendMediaState) sendMediaState({ mode: 'youtube', action: act, time: ytPlayer.getCurrentTime() });
-      }
-    };
-
-    window.toggleScreenShare = async function() {
-      if (localStream) {
-        localStream.getTracks().forEach(t => t.stop());
-        localStream = null;
-        switchToPlayerView();
-        document.getElementById('screenshare-label').innerText = 'Share Screen';
+      if (!roomName) {
+        showToast('Masukkan nama ruangan terlebih dahulu!', 'error');
         return;
       }
+
+      // Konfigurasi Relay Nostr Publik (Stabil & ramah HTTPS)
+      const config = { 
+        appId: 'nobar-space-v1',
+        relays: [
+          'wss://relay.damus.io',
+          'wss://nos.lol',
+          'wss://relay.nostr.band'
+        ]
+      };
+
       try {
-        localStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
-        switchToScreenShareView(localStream);
-        if (addStream) addStream(localStream);
-        document.getElementById('screenshare-label').innerText = 'Hentikan Share';
-      } catch (err) { showToast('Gagal membagikan layar', 'error'); }
-    };
+        if (room) room.leave();
+        
+        room = trysteroJoinRoom(config, roomName);
+        log(`Bergabung ke ruangan: "${roomName}"`);
+        showToast(`Berhasil masuk ruangan: ${roomName}`, 'success');
 
-    function switchToScreenShareView(stream) {
-      if (ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
-      document.getElementById('yt-player-container').classList.add('hidden');
-      html5Player.classList.add('hidden');
-      screenPlayer.classList.remove('hidden');
-      screenPlayer.srcObject = stream;
-      activeMode = 'screenshare';
-    }
+        // Event listener peers
+        room.onPeerJoin(peerId => {
+          log(`Pasangan terhubung! (ID: ${peerId.substring(0, 6)}...)`);
+          updateConnectionStatus(true);
+          showToast('Pasangan telah bergabung!', 'success');
+        });
 
-    function switchToPlayerView() {
-      screenPlayer.pause();
-      screenPlayer.srcObject = null;
-      screenPlayer.classList.add('hidden');
-      document.getElementById('yt-player-container').classList.remove('hidden');
-      activeMode = 'youtube';
-    }
+        room.onPeerLeave(peerId => {
+          log(`Pasangan terputus.`);
+          updateConnectionStatus(false);
+          showToast('Pasangan keluar dari ruangan.', 'error');
+        });
 
-    window.changeVideoHandler = function(e) {
-      e.preventDefault();
-      const url = document.getElementById('video-url-input').value.trim();
-      if (url) { loadVideoUrl(url, true); document.getElementById('video-url-input').value = ''; }
-    };
+        // Setup channel komunikasi P2P
+        [sendMediaState, getMediaState] = room.makeAction('mediaState');
+        [sendChangeUrl, getChangeUrl] = room.makeAction('changeUrl');
 
-    window.loadPreset = function(url) { loadVideoUrl(url, true); };
+        // Listen sinkronisasi status (Play/Pause/Seek)
+        getMediaState((data) => {
+          isRemoteAction = true;
+          if (Math.abs(player.currentTime - data.time) > 0.5) {
+            player.currentTime = data.time;
+          }
+          if (data.type === 'play' && player.paused) {
+            player.play().catch(() => {});
+            log('Pasangan memutar video.');
+          } else if (data.type === 'pause' && !player.paused) {
+            player.pause();
+            log('Pasangan menjeda video.');
+          } else if (data.type === 'seek') {
+            log(`Pasangan melompati durasi ke ${Math.round(data.time)}s.`);
+          }
+          setTimeout(() => { isRemoteAction = false; }, 200);
+        });
 
-    function loadVideoUrl(url, notifyPartner) {
-      const ytId = extractYouTubeId(url);
-      if (ytId) {
-        activeMode = 'youtube';
-        document.getElementById('yt-player-container').classList.remove('hidden');
-        html5Player.classList.add('hidden');
-        screenPlayer.classList.add('hidden');
-        if (ytPlayer && ytPlayer.loadVideoById) ytPlayer.loadVideoById(ytId);
+        // Listen perubahan URL video
+        getChangeUrl((url) => {
+          log(`Menerima URL video baru dari pasangan.`);
+          document.getElementById('video-source').src = url;
+          player.load();
+          showToast('URL video telah diperbarui oleh pasangan.', 'info');
+        });
+
+      } catch (err) {
+        log(`Gagal terhubung: ${err.message}`);
+        showToast('Gagal menghubungkan ke ruangan.', 'error');
       }
-      if (notifyPartner && sendChangeUrl) sendChangeUrl(url);
     }
 
-    window.sendChatHandler = function(e) {
-      e.preventDefault();
-      const input = document.getElementById('chat-input');
-      if (!input.value.trim()) return;
-      appendChatMessage(input.value.trim(), 'me');
-      if (sendChat) sendChat(input.value.trim());
-      input.value = '';
-    };
+    function changeMediaUrl() {
+      const urlInput = document.getElementById('video-url-input');
+      const url = urlInput.value.trim();
 
-    function appendChatMessage(text, sender) {
-      const chatBox = document.getElementById('chat-messages');
-      const div = document.createElement('div');
-      div.className = `flex flex-col ${sender === 'me' ? 'items-end' : 'items-start'} my-1`;
-      div.innerHTML = `<div class="px-3 py-2 rounded max-w-[85%] ${sender === 'me' ? 'bg-rose-600 text-white' : 'bg-slate-900 border border-slate-800'}">${text}</div>`;
-      chatBox.appendChild(div);
-      chatBox.scrollTop = chatBox.scrollHeight;
+      if (!url) {
+        showToast('Masukkan URL video yang valid!', 'error');
+        return;
+      }
+
+      document.getElementById('video-source').src = url;
+      player.load();
+      log(`Memuat video baru: ${url}`);
+
+      if (sendChangeUrl) {
+        sendChangeUrl(url);
+      }
     }
 
-    window.sendEmoji = function(e) { triggerFloatingEmoji(e); if (sendEmojiAction) sendEmojiAction(e); };
-    function triggerFloatingEmoji(e) {
-      const overlay = document.getElementById('emoji-overlay');
-      const el = document.createElement('div');
-      el.innerText = e;
-      el.className = 'absolute text-3xl pointer-events-none transition-all duration-1000 ease-out opacity-100';
-      el.style.left = (Math.random() * 70 + 15) + '%';
-      el.style.bottom = '15px';
-      overlay.appendChild(el);
-      requestAnimationFrame(() => { setTimeout(() => { el.style.transform = 'translateY(-140px)'; el.style.opacity = '0'; }, 50); });
-      setTimeout(() => el.remove(), 1100);
-    }
+    // Event listener player untuk mengirim perintah ke pasangan
+    player.addEventListener('play', () => {
+      if (!isRemoteAction && sendMediaState) {
+        sendMediaState({ type: 'play', time: player.currentTime });
+        log('Memutar video...');
+      }
+    });
 
-    function showToast(msg, type) {
-      const container = document.getElementById('toast-container');
-      const t = document.createElement('div');
-      t.className = 'px-3.5 py-2 rounded border text-xs bg-slate-900 border-slate-700 text-slate-200 shadow-lg';
-      t.innerText = msg;
-      container.appendChild(t);
-      setTimeout(() => t.remove(), 2500);
-    }
+    player.addEventListener('pause', () => {
+      if (!isRemoteAction && sendMediaState) {
+        sendMediaState({ type: 'pause', time: player.currentTime });
+        log('Menjeda video...');
+      }
+    });
+
+    player.addEventListener('seeked', () => {
+      if (!isRemoteAction && sendMediaState) {
+        sendMediaState({ type: 'seek', time: player.currentTime });
+      }
+    });
   </script>
 </body>
 </html>
